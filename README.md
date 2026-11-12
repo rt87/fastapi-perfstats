@@ -238,7 +238,22 @@ With `recent_minutes > 0` the frequency table gets a `Last N min` column: an inl
 
 ### Prometheus
 
-_Planned (#17)._
+Set `prometheus=True` to serve the statistics in the Prometheus text format at `{stats_path}/metrics` (protected like
+the other stats endpoints, not recorded itself). Metric names start with `prometheus_prefix` (default `fastapi_stats`):
+`_requests_total`, `_responses_errors_total{status_class}`, `_request_duration_seconds` (summary) and, once the store
+has dropped something, `_dropped_records_total`. Labels are `method` and `route`.
+
+```yaml
+scrape_configs:
+  - job_name: my-api
+    metrics_path: /stats/metrics
+    basic_auth: {username: admin, password_file: /etc/prometheus/stats-password}
+    static_configs:
+      - targets: ["api.example.internal:8000"]
+```
+
+Quantiles cover the last `window_size` calls per route and cannot be aggregated across instances. For fleet-wide SLOs
+use prometheus-fastapi-instrumentator or prometheus-client histograms.
 
 ### Overhead
 
