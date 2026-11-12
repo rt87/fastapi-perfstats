@@ -171,7 +171,14 @@ _Planned (#5)._
 
 ### Timing semantics
 
-_Planned (#6)._
+`StatsMiddleware` stops the clock when the last body chunk is handed to the server, so Starlette background tasks
+that run afterwards are not counted, while a streaming response is measured including its pauses between chunks.
+(`StatsRoute` and `track()` measure until the handler returns; body streaming is excluded there.)
+
+- A client disconnect before the response completed is recorded as status `499` (counts as a 4xx error).
+- An exception after the response started but before it completed is recorded as `500`.
+- Disconnect messages arriving after completion change nothing.
+- With `track_sizes`, request and response body bytes are summed from the ASGI messages.
 
 ### Lifecycle
 
