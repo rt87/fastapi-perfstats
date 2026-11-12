@@ -216,7 +216,22 @@ value. Values must be `None` or `>= 0`, keys must not be empty. The slow-call he
 
 ### Slow-call context
 
-_Planned (#13)._
+A slow-call entry can carry a request or trace id, the query string and custom context. The extras are computed only
+for calls that are actually slow, so fast calls cost nothing extra.
+
+- **Request id** (on by default): the first header from `slow_request_id_headers` (default `x-request-id`,
+  `traceparent`) that is present. For `traceparent` only the 32-hex trace id is kept; invalid values are ignored. Values
+  are cut to 128 characters.
+- **Query string** (`slow_capture_query=True`, off by default): stored with the values of parameters whose NAME contains
+  one of `redact_query_params` (case-insensitive substring, default `pass`, `tok`, `secret`, `key`, `auth`, `sig`,
+  `session`, `code`) replaced by `[redacted]`; at most 500 characters.
+- **Context hook** (`slow_context`): a function `scope -> {name: value}` for your own correlation data. At most 10
+  items, keys and values cut to 200 characters. If it raises, the request is unaffected: the error is logged once per
+  exception type on the `fastapi_stats` logger and `{"context_error": "<ExceptionTypeName>"}` is stored.
+
+Privacy: the defaults store no query and no custom context. Request and response bodies and all headers other than the
+configured id headers are never read or stored. The page and the JSON show `Request id`, `Query` and `Context`; the
+page escapes all of them.
 
 ### Payload sizes
 
