@@ -221,7 +221,11 @@ _Planned (#10)._
 
 ### Error rates and stddev
 
-_Planned (#11)._
+Each route shows `5xx %` and `4xx %` (errors divided by all calls of that route) and `Stddev`, the population
+standard deviation of its durations in ms (`sqrt(E[x^2] - mean^2)`, computed from a running sum of squares over all
+calls, not just the quantile window). A route with a single call has a stddev of `0.0`. The JSON has
+`error_rate_4xx`, `error_rate_5xx` and `stddev_ms` per route. With SQLite the sums live in the table `ext_stddev`;
+memory and SQLite give identical numbers.
 
 ### Per-route slow thresholds
 

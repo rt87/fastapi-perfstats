@@ -235,7 +235,10 @@ def test_every_stub_satisfies_extension(ext: Extension):
     ext.sqlite_finish({row.key: row}, db, config, 0.0)
     ext.sqlite_reset(db)
     assert all(isinstance(c, Column) for c in ext.columns(config))
-    assert row == make_route_stats()
+    expected = make_route_stats()
+    if ext.name == "stddev":  # real behaviour (#11): one 10 ms call has a stddev of 0.0, rates stay 0.0
+        expected.stddev_ms = 0.0
+    assert row == expected
     db.close()
 
 
