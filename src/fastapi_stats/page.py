@@ -30,7 +30,7 @@ _CSS = """
 body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;margin:1rem 2rem}
 table{border-collapse:collapse;width:100%;margin:.5rem 0 1.5rem}
 th,td{border:1px solid var(--line);padding:.3rem .6rem;text-align:right}
-th:first-child,td:first-child{text-align:left}
+th:nth-child(-n+2),td:nth-child(-n+2){text-align:left}
 th{background:var(--head);cursor:pointer;user-select:none}
 .bad{color:var(--bad)} input{background:var(--bg);color:var(--fg);border:1px solid var(--line);padding:.2rem}
 h1,h2{font-weight:600} .mut{color:var(--mut)}
@@ -79,6 +79,19 @@ def _check_basic_auth(request: Request, auth: BasicAuth | None) -> Response | No
     return PlainTextResponse("Unauthorized", 401, headers={"WWW-Authenticate": 'Basic realm="stats"'})
 
 
+def split_key(key: str) -> tuple[str, str]:
+    """``"GET /items/{id}"`` -> ``("GET", "/items/{id}")``; keys without a leading method -> ``("", key)``."""
+    method, sep, route = key.partition(" ")
+    if sep and method.isalpha() and method.isupper():
+        return method, route
+    return "", key
+
+
+def _key_cells(key: str) -> str:
+    method, route = split_key(key)
+    return _td(method) + _td(route)
+
+
 def _num(v: float, digits: int = 2) -> str:
     return f"{v:.{digits}f}"
 
@@ -109,7 +122,7 @@ def render_html(collector: StatsCollector) -> str:
 
     freq = [
         "<tr>"
-        + _td(r.key)
+        + _key_cells(r.key)
         + _td(r.count, r.count)
         + _td(r.errors_5xx, r.errors_5xx, "bad" if r.errors_5xx else "")
         + _td(r.errors_4xx, r.errors_4xx)
@@ -121,7 +134,7 @@ def render_html(collector: StatsCollector) -> str:
     by_max = sorted(routes, key=lambda r: r.max_ms, reverse=True)
     runtimes = [
         "<tr>"
-        + _td(r.key)
+        + _key_cells(r.key)
         + _td(_num(r.max_ms), r.max_ms)
         + "".join(_td(_num(r.quantiles[lb]), r.quantiles[lb]) for lb in labels)
         + _td(_num(r.mean_ms), r.mean_ms)
@@ -131,8 +144,8 @@ def render_html(collector: StatsCollector) -> str:
     ]
     slow_rows = [
         "<tr>"
+        + _key_cells(s.key)
         + _td(_ts(s.ts), s.ts)
-        + _td(s.key)
         + _td(_num(s.duration_ms), s.duration_ms)
         + _td(s.status, s.status, "bad" if s.status >= 500 else "")
         + "</tr>"
@@ -147,13 +160,18 @@ def render_html(collector: StatsCollector) -> str:
         f"Quantiles over the last {cfg.window_size} calls per route. "
         f'<a href="{escape(cfg.stats_path)}.json">JSON</a></p>'
         "<h2>Call frequency</h2>"
-        + _table("freq", ["Route", "Count", "5xx", "4xx", "Share", "Calls/min"], freq)
+        + _table("freq", ["Method", "Route", "Count", "5xx", "4xx", "Share", "Calls/min"], freq)
         + "<h2>Longest runtimes</h2>"
-        + _table("rt", ["Route", "Max", *[lb for lb in labels], "Mean", "Min"], runtimes)
+        + _table("rt", ["Method", "Route", "Max", *[lb for lb in labels], "Mean", "Min"], runtimes)
         + f"<h2>Slow calls ({escape(thr)})</h2>"
-        + _table("slow", ["Time", "Route", "Duration", "Status"], slow_rows)
+        + _table("slow", ["Method", "Route", "Time", "Duration", "Status"], slow_rows)
         + f"<script>{_JS}</script></body></html>"
     )
+
+
+def _with_parts(d: dict[str, Any]) -> dict[str, Any]:
+    d["method"], d["route"] = split_key(d["key"])  # "key" (METHOD + template) stays for compatibility
+    return d
 
 
 def render_json(collector: StatsCollector) -> dict[str, Any]:
@@ -161,8 +179,8 @@ def render_json(collector: StatsCollector) -> dict[str, Any]:
     return {
         "quantiles": [quantile_label(q) for q in cfg.quantiles],
         "slow_threshold_ms": cfg.slow_threshold_ms,
-        "routes": [asdict(r) for r in collector.store.routes()],
-        "slow_calls": [asdict(s) for s in collector.store.slow_calls()],
+        "routes": [_with_parts(asdict(r)) for r in collector.store.routes()],
+        "slow_calls": [_with_parts(asdict(s)) for s in collector.store.slow_calls()],
     }
 
 

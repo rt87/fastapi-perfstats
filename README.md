@@ -3,7 +3,7 @@
 [![CI](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.12--3.15-blue)
 ![License](https://img.shields.io/github/license/rt87/fastapi-stats)
-![Tests](https://img.shields.io/badge/tests-70%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![Status](https://img.shields.io/badge/status-prototype-orange)
@@ -74,7 +74,8 @@ first); pass that same collector to `mount_stats` to see its data. Do not combin
 
 ## The stats page
 
-Served at `stats_path` (default `/stats`), JSON at `/stats.json`. Three plain tables: call frequency per route
+Served at `stats_path` (default `/stats`), JSON at `/stats.json`. Three plain tables, each starting with separate `Method` and `Route` columns (the JSON has `method` and `route`
+fields next to the combined `key`): call frequency per route
 (count, 5xx, 4xx, share, calls per minute), longest runtimes per route (max, quantiles, mean, min) and the slow-call
 list (time, route, duration, status). Click a header to sort, type in the filter box to narrow rows. Colours follow
 `prefers-color-scheme`. The small script is inline, there are no CDN or framework requests, and every string
