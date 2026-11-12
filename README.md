@@ -3,8 +3,6 @@
 [![CI](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.12--3.15-blue)
 ![License](https://img.shields.io/github/license/rt87/fastapi-stats)
-![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![mypy](https://img.shields.io/badge/checked%20with-mypy%20strict-2a6db2)
 ![Status](https://img.shields.io/badge/status-prototype-orange)
@@ -131,6 +129,7 @@ All options live in the frozen dataclass `StatsConfig`.
 uv sync
 uv run pytest      # tests + coverage
 uv run ruff check .
+uv run ruff format --check .
 uv run mypy        # strict; tests/demo only relax the "must be annotated" rules
 ```
 

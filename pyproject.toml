@@ -64,4 +64,4 @@ check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=fastapi_stats --cov-report=term-missing"
+addopts = "--cov=fastapi_stats --cov-branch --cov-fail-under=95 --cov-report=term-missing"
