@@ -67,6 +67,12 @@ class StatsConfig:
             raise ValueError("stats_path must start with '/'")
 
     @property
+    def credentials(self) -> BasicAuth | None:
+        """``basic_auth`` normalised to a ``BasicAuth`` (the tuple form is converted in ``__post_init__``)."""
+        auth = self.basic_auth
+        return BasicAuth(*auth) if isinstance(auth, tuple) else auth
+
+    @property
     def excluded(self) -> tuple[str, ...]:
         base = self.stats_path.rstrip("/")
         return (*self.exclude_paths, base, base + ".json")

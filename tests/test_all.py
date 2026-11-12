@@ -1,13 +1,18 @@
 import asyncio
 import base64
 import logging
+import queue
+import secrets
+import threading
 import time
+from collections.abc import MutableMapping
+from typing import Any
 
 import pytest
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
+from starlette.types import ASGIApp
 
-import fastapi_stats.page as page_mod
 from fastapi_stats import (
     MemoryStore,
     SqliteStore,
@@ -19,6 +24,19 @@ from fastapi_stats import (
 )
 from fastapi_stats.models import OTHER_KEY, nearest_rank
 from fastapi_stats.stores import build_store
+
+
+def call_asgi(app: ASGIApp, scope: MutableMapping[str, Any]) -> None:
+    async def receive() -> MutableMapping[str, Any]:
+        return {"type": "http.request"}
+
+    async def send(message: MutableMapping[str, Any]) -> None:
+        return None
+
+    async def run() -> None:
+        await app(scope, receive, send)
+
+    asyncio.run(run())
 
 
 def make_app(cfg: StatsConfig | None = None, **kw):
@@ -180,7 +198,7 @@ def test_non_http_scope_passthrough():
         seen.append(scope["type"])
 
     mw = c.middleware(inner)
-    asyncio.run(mw({"type": "lifespan"}, None, None))
+    call_asgi(mw, {"type": "lifespan"})
     assert seen == ["lifespan"] and c.store.routes() == []
 
 
@@ -192,7 +210,7 @@ def test_exception_before_response_start_is_500():
 
     mw = c.middleware(inner)
     with pytest.raises(ValueError):
-        asyncio.run(mw({"type": "http", "path": "/x", "method": "GET"}, None, None))
+        call_asgi(mw, {"type": "http", "path": "/x", "method": "GET"})
     assert by_key(c)["GET /x"].errors_5xx == 1
 
 
@@ -323,11 +341,9 @@ def test_sqlite_prunes_rows_and_persists(tmp_path):
 
 
 def test_sqlite_queue_full_drops(tmp_path):
-    import queue
-
     s = SqliteStore(StatsConfig(storage="sqlite", sqlite_path=str(tmp_path / "q.db")))
     s.flush()
-    full = queue.Queue(1)
+    full: queue.Queue[object] = queue.Queue(1)
     full.put("filler")
     real_q, s._q = s._q, full  # writer keeps draining the real queue; records go to the full one
     s.record("k", 1, 200)
@@ -357,12 +373,17 @@ def test_build_store_variants(tmp_path):
 
 
 def test_memory_store_thread_safety():
-    import threading
-
     s = MemoryStore(StatsConfig())
-    ts = [threading.Thread(target=lambda: [s.record("k", 1, 200) for _ in range(500)]) for _ in range(8)]
-    [t.start() for t in ts]
-    [t.join() for t in ts]
+
+    def work() -> None:
+        for _ in range(500):
+            s.record("k", 1, 200)
+
+    ts = [threading.Thread(target=work) for _ in range(8)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
     assert s.routes()[0].count == 4000
 
 
@@ -468,9 +489,14 @@ def test_basic_auth_rejected(auth_client, path, headers):
 
 
 def test_basic_auth_uses_compare_digest_for_both_fields(monkeypatch):
-    calls = []
-    real = page_mod.secrets.compare_digest
-    monkeypatch.setattr(page_mod.secrets, "compare_digest", lambda a, b: calls.append((a, b)) or real(a, b))
+    calls: list[tuple[bytes, bytes]] = []
+    real = secrets.compare_digest
+
+    def spy(a: bytes, b: bytes) -> bool:
+        calls.append((a, b))
+        return real(a, b)
+
+    monkeypatch.setattr(secrets, "compare_digest", spy)  # page.py calls secrets.compare_digest at request time
     app, _ = make_app(basic_auth=("u", "p"))
     TestClient(app).get("/stats", headers=hdr("nope", "nope"))  # wrong user: password still compared
     assert [c[1] for c in calls] == [b"u", b"p"]

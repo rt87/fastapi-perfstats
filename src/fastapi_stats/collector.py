@@ -6,12 +6,17 @@ import functools
 import importlib
 import time
 from collections.abc import Awaitable, Callable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from fastapi_stats.config import StatsConfig
 from fastapi_stats.stores import StatsStore, build_store
+
+if TYPE_CHECKING:  # fastapi is only needed for typing here; the runtime import stays lazy
+    from types import ModuleType
+
+    from fastapi_stats.route import StatsRoute
 
 
 def _is_excluded(path: str, excluded: tuple[str, ...]) -> bool:
@@ -44,7 +49,7 @@ class StatsCollector:
 
     # -- app/router level ------------------------------------------------------------------------------------
     @property
-    def middleware(self) -> type:
+    def middleware(self) -> Callable[[ASGIApp], ASGIApp]:
         """``app.add_middleware(collector.middleware)``-friendly class bound to this collector."""
         collector = self
 
@@ -56,9 +61,10 @@ class StatsCollector:
 
     # -- single routes ---------------------------------------------------------------------------------------
     @property
-    def route_class(self) -> type:
+    def route_class(self) -> type[StatsRoute]:
         """``APIRouter(route_class=collector.route_class)`` or ``@router.get(..., route_class_override=...)``."""
-        return import_route_module().make_route_class(self)
+        route_cls: type[StatsRoute] = import_route_module().make_route_class(self)
+        return route_cls
 
     def track(
         self, name: str | None = None
@@ -120,7 +126,7 @@ class StatsMiddleware:
                 self.collector.record(key, elapsed, status)
 
 
-def import_route_module() -> Any:
+def import_route_module() -> ModuleType:
     """Import ``fastapi_stats.route`` (needs FastAPI) with a clear error if FastAPI is missing."""
     try:
         return importlib.import_module("fastapi_stats.route")

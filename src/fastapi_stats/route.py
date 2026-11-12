@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 from fastapi.routing import APIRoute
 from starlette.requests import Request
@@ -20,7 +21,7 @@ class StatsRoute(APIRoute):
 
     collector: StatsCollector | None = None  # None -> process-wide default, resolved per request
 
-    def get_route_handler(self) -> Callable[[Request], Awaitable[Response]]:
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         original = super().get_route_handler()
 
         async def handler(request: Request) -> Response:

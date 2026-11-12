@@ -195,7 +195,7 @@ def stats_router(
     timings: do NOT leave it public.
     """
     p = (path or collector.config.stats_path).rstrip("/") or "/"
-    auth = collector.config.basic_auth
+    auth = collector.config.credentials
     if auth is None and not dependencies:
         log.warning("fastapi-stats: stats page at %s is mounted WITHOUT authentication", p)
 
