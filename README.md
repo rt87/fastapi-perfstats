@@ -179,7 +179,13 @@ _Planned (#7)._
 
 ### Security headers
 
-_Planned (#8)._
+The HTML page is CSP-compatible without extra files: its inline `<style>` and `<script>` are allowed by SHA-256
+hashes computed from the exact served text, so it also works under a strict global policy. It is sent with
+`Content-Security-Policy: default-src 'none'; style-src <hash>; script-src <hash>; img-src 'self' data:; connect-src
+'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and `Cache-Control: no-store`. JSON and the 401/403 responses
+carry `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. The page uses no inline event handlers, no
+`style="..."` attributes and no dynamic content inside `<script>` / `<style>`; data is passed via `data-*` attributes.
 
 ### Access control
 

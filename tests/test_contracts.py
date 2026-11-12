@@ -15,7 +15,6 @@ from fastapi_stats import (
     StatsCollector,
     StatsConfig,
     auth,
-    headers,
     keys,
     lifecycle,
     live,
@@ -275,8 +274,6 @@ def test_owner_stubs_are_neutral():
     assert keys.build_key(scope, StatsConfig(key_func=lambda s: "x" * 500, max_key_length=5), "") == "xxxxx"
     assert mounts.mount_prefix(scope) == ""
     assert slow_context.capture(scope, config, "GET /raw", 1.0) == SlowExtra()
-    assert headers.page_headers("css", "js") == {}
-    assert headers.data_headers() == {}
     assert prometheus.render_prometheus(StatsCollector(config)) == ""
     assert lifecycle.PART.html_top(StatsCollector(config)) == ""
     assert reset.PART.html_top(StatsCollector(config)) == ""
