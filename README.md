@@ -134,7 +134,16 @@ All options live in the frozen dataclass `StatsConfig`.
 
 ### Storage
 
-_Planned (#1)._
+Both stores (`MemoryStore`, `SqliteStore`) take an optional `extensions` sequence (`None` = `fastapi_stats.ext.EXTENSIONS`)
+and call each extension's hooks with the final key (also for the `other` bucket).
+
+- **Slow calls** keep `query`, `request_id` and `context` (memory: on `SlowCall`; SQLite: table `slow_call_extra`, context
+  as JSON, pruned together with the slow log). The threshold comes from `config.slow_threshold_for(key)`.
+- **`reset()`** clears all statistics and every extension's state. The SQLite store applies it in order with the writer
+  queue: records enqueued before the call are gone, later ones are kept. On a closed store it raises `RuntimeError`.
+- **`dropped`** counts records the SQLite queue could not take; **`close()`** may be called more than once.
+- If an extension hook or SQL statement fails inside the SQLite writer, that batch is rolled back and logged; the
+  writer keeps running.
 
 ### SQLite schema
 
