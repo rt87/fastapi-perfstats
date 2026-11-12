@@ -38,9 +38,7 @@ class StatsRoute(APIRoute):
                 status = getattr(exc, "status_code", 500)
                 raise
             finally:
-                key = collector.key_for(request.scope)
-                if key is not None:
-                    collector.record(key, (time.perf_counter() - start) * 1000, status)
+                collector.finish(request.scope, (time.perf_counter() - start) * 1000, status)
 
         return handler
 

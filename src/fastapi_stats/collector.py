@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.types import ASGIApp
 
+# `ext` must load before `slow_context` (the extension registry imports slow_context back); names load in this order
+from fastapi_stats import ext, keys, mounts, slow_context  # noqa: F401
 from fastapi_stats.config import StatsConfig
 from fastapi_stats.middleware import StatsMiddleware
-from fastapi_stats.models import CallRecord
+from fastapi_stats.models import CallRecord, SlowExtra
 from fastapi_stats.stores import StatsStore, build_store
 
 if TYPE_CHECKING:  # fastapi is only needed for typing here; the runtime import stays lazy
@@ -36,18 +38,51 @@ class StatsCollector:
     def is_excluded(self, path: str) -> bool:
         return _is_excluded(path, self.config.excluded)
 
-    def key_for(self, scope: Mapping[str, Any]) -> str | None:
-        """Key = METHOD + route template. Raw path only when no route matched (bounded by max_routes/"other")."""
-        if self.config.key_func is not None:
-            key = self.config.key_func(scope)
-        else:
-            route = scope.get("route")  # set by routing, i.e. only valid *after* the app has run
-            path = getattr(route, "path", None) or scope.get("path", "")
-            key = f"{scope.get('method', 'GET')} {path}"
-        return None if key is None else key[: self.config.max_key_length]
+    def finish(
+        self,
+        scope: Mapping[str, Any],
+        duration_ms: float,
+        status: int,
+        *,
+        request_bytes: int | None = None,
+        response_bytes: int | None = None,
+    ) -> None:
+        """Record one finished request. Call after the app ran: ``scope["route"]`` is filled in by routing."""
+        key = keys.build_key(scope, self.config, mounts.mount_prefix(scope))  # key_func, if set, decides there
+        if key is None:
+            return
+        key = key[: self.config.max_key_length]
+        threshold = self.config.slow_threshold_for(key)
+        slow = threshold is not None and duration_ms >= threshold
+        extra = slow_context.capture(scope, self.config, key, duration_ms) if slow else SlowExtra()
+        self.record_call(
+            CallRecord(
+                key=key,
+                duration_ms=duration_ms,
+                status=status,
+                ts=time.time(),
+                method=scope.get("method", ""),
+                path=scope.get("path", ""),
+                request_bytes=request_bytes,
+                response_bytes=response_bytes,
+                query=extra.query,
+                request_id=extra.request_id,
+                context=extra.context,
+            )
+        )
+
+    def record_call(self, call: CallRecord) -> None:
+        self.store.record(call)
 
     def record(self, key: str, duration_ms: float, status: int) -> None:
-        self.store.record(CallRecord(key=key, duration_ms=duration_ms, status=status, ts=time.time()))
+        self.record_call(CallRecord(key=key, duration_ms=duration_ms, status=status, ts=time.time()))
+
+    def reset(self) -> None:
+        """Forget all statistics (stores that do not support it raise ``NotImplementedError``)."""
+        self.store.reset()
+
+    def close(self) -> None:
+        self.store.close()
 
     # -- app/router level ------------------------------------------------------------------------------------
     @property
@@ -88,7 +123,11 @@ class StatsCollector:
                     status = getattr(exc, "status_code", 500)
                     raise
                 finally:
-                    self.record(label, (time.perf_counter() - start) * 1000, status)
+                    self.record_call(
+                        CallRecord(
+                            key=label, duration_ms=(time.perf_counter() - start) * 1000, status=status, ts=time.time()
+                        )
+                    )
 
             return wrapper
 

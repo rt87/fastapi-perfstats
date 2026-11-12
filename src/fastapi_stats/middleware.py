@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from fastapi_stats import lifecycle
+
 if TYPE_CHECKING:
     from fastapi_stats.collector import StatsCollector
 
@@ -19,6 +21,9 @@ class StatsMiddleware:
         self.collector = collector
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "lifespan":
+            await lifecycle.handle_lifespan(self.collector, self.app, scope, receive, send)
+            return
         if scope["type"] != "http" or self.collector.is_excluded(scope.get("path", "")):
             await self.app(scope, receive, send)
             return
@@ -39,6 +44,4 @@ class StatsMiddleware:
             elapsed = (time.perf_counter() - start) * 1000
             if not started:
                 status = 500
-            key = self.collector.key_for(scope)  # after the call: scope["route"] is filled in by now
-            if key is not None:
-                self.collector.record(key, elapsed, status)
+            self.collector.finish(scope, elapsed, status)  # after the call: scope["route"] is filled in by now

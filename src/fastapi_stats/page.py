@@ -2,24 +2,23 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
-import contextlib
 import logging
-import secrets
-from collections.abc import Sequence
-from dataclasses import asdict
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from html import escape
 from typing import Any
 
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route, Router
 
+from fastapi_stats import auth, ext, headers, parts
 from fastapi_stats.collector import StatsCollector
-from fastapi_stats.config import BasicAuth, quantile_label
+from fastapi_stats.config import StatsConfig, quantile_label
+from fastapi_stats.ext.base import Column, EndpointSpec
+from fastapi_stats.models import RouteStats, SlowCall
 
 log = logging.getLogger("fastapi_stats")
 
@@ -61,24 +60,6 @@ document.querySelectorAll('input.f').forEach(function(inp){
 """
 
 
-def _check_basic_auth(request: Request, auth: BasicAuth | None) -> Response | None:
-    """``None`` if the request may pass, else a 401 response."""
-    if auth is None:
-        return None
-    user, pw = b"", b""
-    header = request.headers.get("authorization", "")
-    scheme, _, token = header.partition(" ")
-    if scheme.lower() == "basic":
-        with contextlib.suppress(binascii.Error, ValueError):
-            user, _, pw = base64.b64decode(token, validate=True).partition(b":")
-    # both compares always run (no short-circuit) so timing does not reveal which part was wrong
-    ok_user = secrets.compare_digest(user, auth.username.encode())
-    ok_pw = secrets.compare_digest(pw, auth.password.encode())
-    if ok_user and ok_pw:
-        return None
-    return PlainTextResponse("Unauthorized", 401, headers={"WWW-Authenticate": 'Basic realm="stats"'})
-
-
 def split_key(key: str) -> tuple[str, str]:
     """``"GET /items/{id}"`` -> ``("GET", "/items/{id}")``; keys without a leading method -> ``("", key)``."""
     method, sep, route = key.partition(" ")
@@ -87,23 +68,91 @@ def split_key(key: str) -> tuple[str, str]:
     return "", key
 
 
-def _key_cells(key: str) -> str:
-    method, route = split_key(key)
-    return _td(method) + _td(route)
-
-
 def _num(v: float, digits: int = 2) -> str:
     return f"{v:.{digits}f}"
 
 
-def _td(text: object, value: float | None = None, cls: str = "") -> str:
+def _td(text: object, value: float | None = None, cls: str = "", raw: bool = False) -> str:
     v = "" if value is None else f' data-v="{value!r}"'
     c = f' class="{cls}"' if cls else ""
-    return f"<td{v}{c}>{escape(str(text))}</td>"
+    return f"<td{v}{c}>{text if raw else escape(str(text))}</td>"
 
 
-def _table(table_id: str, headers: Sequence[str], rows: list[str]) -> str:
-    head = "".join(f"<th>{escape(h)}</th>" for h in headers)
+@dataclass(frozen=True)
+class _CoreColumn(Column):
+    """A core column; ``cls`` yields the CSS class of its cell (extension columns have none)."""
+
+    cls: Callable[[Any], str] = lambda item: ""
+
+
+def _method(item: RouteStats | SlowCall, config: StatsConfig) -> tuple[str, float | None]:
+    return split_key(item.key)[0], None
+
+
+def _route(item: RouteStats | SlowCall, config: StatsConfig) -> tuple[str, float | None]:
+    return split_key(item.key)[1], None
+
+
+def _key_columns(table: Any) -> list[Column]:
+    return [Column(table, "Method", 10, _method), Column(table, "Route", 20, _route)]
+
+
+def _quantile_cell(label: str) -> Callable[[Any, StatsConfig], tuple[str, float | None]]:
+    return lambda r, config: (_num(r.quantiles[label]), r.quantiles[label])
+
+
+def core_columns(config: StatsConfig) -> list[Column]:
+    """The built-in columns of every table (extensions add theirs through ``Extension.columns``)."""
+    rate_header = "Calls/min (all)" if config.recent_minutes > 0 else "Calls/min"
+    cols: list[Column] = [
+        *_key_columns("freq"),
+        Column("freq", "Count", 30, lambda r, c: (str(r.count), r.count)),
+        _CoreColumn(
+            "freq",
+            "5xx",
+            40,
+            lambda r, c: (str(r.errors_5xx), r.errors_5xx),
+            cls=lambda r: "bad" if r.errors_5xx else "",
+        ),
+        Column("freq", "4xx", 60, lambda r, c: (str(r.errors_4xx), r.errors_4xx)),
+        Column("freq", "Share", 80, lambda r, c: (f"{r.share * 100:.1f}%", r.share)),
+        Column("freq", rate_header, 90, lambda r, c: (_num(r.rate_per_min), r.rate_per_min)),
+        *_key_columns("rt"),
+        Column("rt", "Max", 30, lambda r, c: (_num(r.max_ms), r.max_ms)),
+        Column("rt", "Mean", 60, lambda r, c: (_num(r.mean_ms), r.mean_ms)),
+        Column("rt", "Min", 70, lambda r, c: (_num(r.min_ms), r.min_ms)),
+        *_key_columns("slow"),
+        Column("slow", "Time", 30, lambda s, c: (_ts(s.ts), s.ts)),
+        Column("slow", "Duration", 40, lambda s, c: (_num(s.duration_ms), s.duration_ms)),
+        _CoreColumn(
+            "slow", "Status", 50, lambda s, c: (str(s.status), s.status), cls=lambda s: "bad" if s.status >= 500 else ""
+        ),
+        *_key_columns("sizes"),
+    ]
+    cols += [
+        Column("rt", quantile_label(q), 40 + i, _quantile_cell(quantile_label(q)))
+        for i, q in enumerate(config.quantiles)
+    ]
+    return cols
+
+
+def _columns_for(table: str, config: StatsConfig) -> list[Column]:
+    cols = [c for c in core_columns(config) if c.table == table]
+    for extension in ext.EXTENSIONS:
+        cols += [c for c in extension.columns(config) if c.table == table]
+    return sorted(cols, key=lambda c: c.order)
+
+
+def _table(table_id: str, columns: Sequence[Column], items: Sequence[Any], config: StatsConfig) -> str:
+    head = "".join(f"<th>{escape(c.header)}</th>" for c in columns)
+    rows = []
+    for item in items:
+        cells = []
+        for c in columns:
+            text, value = c.cell(item, config)
+            cls = c.cls(item) if isinstance(c, _CoreColumn) else ""
+            cells.append(_td(text, value, cls, c.raw_html))
+        rows.append("<tr>" + "".join(cells) + "</tr>")
     return (
         f'<input class="f" data-t="{table_id}" placeholder="filter..." aria-label="filter {table_id}">'
         f'<table class="s" id="{table_id}"><thead><tr>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table>'
@@ -114,58 +163,49 @@ def _ts(ts: float) -> str:
     return datetime.fromtimestamp(ts, UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
+def style_text() -> str:
+    """The inline stylesheet of the page."""
+    return _CSS
+
+
+def script_text(collector: StatsCollector) -> str:
+    """The inline script of the page: the core script followed by the script of every page part, in order."""
+    return _JS + "".join(part.js for part in parts.PAGE_PARTS)
+
+
+def _body_attrs(config: StatsConfig) -> str:
+    merged: dict[str, str] = {}
+    for part in parts.PAGE_PARTS:
+        merged.update(part.body_attrs(config))
+    return "".join(f' {escape(k)}="{escape(v)}"' for k, v in merged.items())
+
+
 def render_html(collector: StatsCollector) -> str:
     cfg = collector.config
     routes = collector.store.routes()
     slow = collector.store.slow_calls()
-    labels = [quantile_label(q) for q in cfg.quantiles]
-
-    freq = [
-        "<tr>"
-        + _key_cells(r.key)
-        + _td(r.count, r.count)
-        + _td(r.errors_5xx, r.errors_5xx, "bad" if r.errors_5xx else "")
-        + _td(r.errors_4xx, r.errors_4xx)
-        + _td(f"{r.share * 100:.1f}%", r.share)
-        + _td(_num(r.rate_per_min), r.rate_per_min)
-        + "</tr>"
-        for r in routes
-    ]
     by_max = sorted(routes, key=lambda r: r.max_ms, reverse=True)
-    runtimes = [
-        "<tr>"
-        + _key_cells(r.key)
-        + _td(_num(r.max_ms), r.max_ms)
-        + "".join(_td(_num(r.quantiles[lb]), r.quantiles[lb]) for lb in labels)
-        + _td(_num(r.mean_ms), r.mean_ms)
-        + _td(_num(r.min_ms), r.min_ms)
-        + "</tr>"
-        for r in by_max
-    ]
-    slow_rows = [
-        "<tr>"
-        + _key_cells(s.key)
-        + _td(_ts(s.ts), s.ts)
-        + _td(_num(s.duration_ms), s.duration_ms)
-        + _td(s.status, s.status, "bad" if s.status >= 500 else "")
-        + "</tr>"
-        for s in slow
-    ]
-    thr = "disabled" if cfg.slow_threshold_ms is None else f">= {cfg.slow_threshold_ms:g} ms"
+    sizes_columns = _columns_for("sizes", cfg)
+    sizes_table = ""
+    if len(sizes_columns) > 2:  # more than Method + Route: some extension contributes columns
+        sizes_table = "<h2>Payload sizes</h2>" + _table("sizes", sizes_columns, routes, cfg)
+    tops = "".join(part.html_top(collector) for part in parts.PAGE_PARTS)
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1"><title>API stats</title>'
-        f"<style>{_CSS}</style></head><body><h1>API stats</h1>"
+        f"<style>{style_text()}</style></head><body{_body_attrs(cfg)}><h1>API stats</h1>"
         '<p class="mut">Click a header to sort, type to filter. Durations in ms. '
         f"Quantiles over the last {cfg.window_size} calls per route. "
         f'<a href="{escape(cfg.stats_path)}.json">JSON</a></p>'
-        "<h2>Call frequency</h2>"
-        + _table("freq", ["Method", "Route", "Count", "5xx", "4xx", "Share", "Calls/min"], freq)
+        + tops
+        + "<h2>Call frequency</h2>"
+        + _table("freq", _columns_for("freq", cfg), routes, cfg)
         + "<h2>Longest runtimes</h2>"
-        + _table("rt", ["Method", "Route", "Max", *[lb for lb in labels], "Mean", "Min"], runtimes)
-        + f"<h2>Slow calls ({escape(thr)})</h2>"
-        + _table("slow", ["Method", "Route", "Time", "Duration", "Status"], slow_rows)
-        + f"<script>{_JS}</script></body></html>"
+        + _table("rt", _columns_for("rt", cfg), by_max, cfg)
+        + f"<h2>Slow calls ({escape(cfg.slow_threshold_summary())})</h2>"
+        + _table("slow", _columns_for("slow", cfg), slow, cfg)
+        + sizes_table
+        + f"<script>{script_text(collector)}</script></body></html>"
     )
 
 
@@ -181,6 +221,8 @@ def render_json(collector: StatsCollector) -> dict[str, Any]:
         "slow_threshold_ms": cfg.slow_threshold_ms,
         "routes": [_with_parts(asdict(r)) for r in collector.store.routes()],
         "slow_calls": [_with_parts(asdict(s)) for s in collector.store.slow_calls()],
+        "dropped": collector.store.dropped,
+        "slow_thresholds": dict(cfg.slow_thresholds),
     }
 
 
@@ -192,16 +234,43 @@ def stats_router(collector: StatsCollector, path: str | None = None, dependencie
     only then). Basic auth from the config applies in both cases. The page exposes your route structure and
     timings: do NOT leave it public.
     """
-    p = (path or collector.config.stats_path).rstrip("/") or "/"
-    auth = collector.config.credentials
-    if auth is None and not dependencies:
+    config = collector.config
+    p = (path or config.stats_path).rstrip("/") or "/"
+    if config.credentials is None and config.access is None and not dependencies:
         log.warning("fastapi-stats: stats page at %s is mounted WITHOUT authentication", p)
 
+    async def denied(request: Request) -> Response | None:
+        response = await auth.authorize(request, config)
+        if response is not None:
+            response.headers.update(headers.data_headers())
+        return response
+
     async def stats_page(request: Request) -> Response:
-        return _check_basic_auth(request, auth) or HTMLResponse(await run_in_threadpool(render_html, collector))
+        if (response := await denied(request)) is not None:
+            return response
+        html = await run_in_threadpool(render_html, collector)
+        return HTMLResponse(html, headers=headers.page_headers(style_text(), script_text(collector)))
 
     async def stats_json(request: Request) -> Response:
-        return _check_basic_auth(request, auth) or JSONResponse(await run_in_threadpool(render_json, collector))
+        if (response := await denied(request)) is not None:
+            return response
+        return JSONResponse(await run_in_threadpool(render_json, collector), headers=headers.data_headers())
+
+    def endpoint_for(spec: EndpointSpec) -> Callable[[Request], Awaitable[Response]]:
+        inner = spec.handler(collector)
+
+        async def endpoint(request: Request) -> Response:
+            if (response := await denied(request)) is not None:
+                return response
+            response = await inner(request)
+            response.headers.update(headers.data_headers())
+            return response
+
+        return endpoint
+
+    extra = [
+        (p + spec.suffix, endpoint_for(spec), list(spec.methods)) for spec in parts.ENDPOINTS if spec.enabled(config)
+    ]
 
     if dependencies:
         try:
@@ -211,8 +280,16 @@ def stats_router(collector: StatsCollector, path: str | None = None, dependencie
         router = APIRouter(dependencies=list(dependencies), include_in_schema=False)
         router.add_api_route(p, stats_page, methods=["GET"], response_class=HTMLResponse)
         router.add_api_route(p + ".json", stats_json, methods=["GET"])
+        for route_path, endpoint, methods in extra:
+            router.add_api_route(route_path, endpoint, methods=methods)
         return router
-    return Router(routes=[Route(p, stats_page, methods=["GET"]), Route(p + ".json", stats_json, methods=["GET"])])
+    return Router(
+        routes=[
+            Route(p, stats_page, methods=["GET"]),
+            Route(p + ".json", stats_json, methods=["GET"]),
+            *[Route(route_path, endpoint, methods=methods) for route_path, endpoint, methods in extra],
+        ]
+    )
 
 
 def mount_stats(
