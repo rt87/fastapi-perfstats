@@ -1,0 +1,67 @@
+name: Release
+
+# Builds and verifies the package. Nothing is uploaded anywhere until the owner explicitly enables publishing
+# (see RELEASING.md).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - run: uvx twine check dist/*
+      - name: Check wheel contents and tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import tomllib
+          import zipfile
+
+          (wheel,) = glob.glob("dist/*.whl")
+          names = zipfile.ZipFile(wheel).namelist()
+          assert "fastapi_stats/py.typed" in names, "py.typed missing from the wheel"
+          assert not any(n.startswith("tests/") for n in names), "tests/ must not be in the wheel"
+
+          if os.environ["REF_TYPE"] == "tag":
+              with open("pyproject.toml", "rb") as fh:
+                  version = tomllib.load(fh)["project"]["version"]
+              tag = os.environ["REF_NAME"].removeprefix("v")
+              assert tag == version, f"tag {tag!r} does not match pyproject version {version!r}"
+          print("ok:", wheel)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    needs: build
+    # enable only after the owner's explicit go for the first release
+    if: false
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
