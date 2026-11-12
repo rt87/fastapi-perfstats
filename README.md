@@ -196,7 +196,24 @@ carry `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. The page 
 
 ### Access control
 
-_Planned (#9)._
+Every stats endpoint (page, JSON and the optional reset / metrics endpoints) runs the same check: HTTP Basic first
+(`basic_auth`, 401 on failure), then `access`, a callable `request -> bool` that may be sync or async. `False` gives
+`403 Forbidden`; an exception in the check propagates (500) and is never swallowed. The check is not called when Basic
+auth already failed. No "mounted WITHOUT authentication" warning is logged when `access` is set.
+
+```python
+from fastapi_stats import StatsConfig, localhost_only
+
+
+async def staff_only(request) -> bool:
+    return await my_session_store.is_staff(request.cookies.get("session"))
+
+
+StatsConfig(access=staff_only)  # any sync or async check
+StatsConfig(access=localhost_only)  # loopback clients only (127.0.0.1, ::1)
+```
+
+`localhost_only` is unreliable behind a reverse proxy, where every client appears as the proxy's address.
 
 ### Reset
 

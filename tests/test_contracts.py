@@ -319,12 +319,6 @@ def test_authorize_matches_basic_auth():
     asyncio.run(run())
 
 
-def test_localhost_only_not_implemented():
-    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
-    with pytest.raises(NotImplementedError):
-        auth.localhost_only(request)
-
-
 def test_ensure_schema_creates_tables(tmp_path):
     path = tmp_path / "s.db"
     ensure_schema(path)
