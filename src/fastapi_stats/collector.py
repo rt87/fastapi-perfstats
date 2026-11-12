@@ -57,6 +57,8 @@ class StatsCollector:
     @property
     def route_class(self) -> type:
         """``APIRouter(route_class=collector.route_class)`` or ``@router.get(..., route_class_override=...)``."""
+        from fastapi_stats.route import make_route_class  # lazy: needs fastapi
+
         return make_route_class(self)
 
     def track(
@@ -119,32 +121,18 @@ class StatsMiddleware:
                 self.collector.record(key, elapsed, status)
 
 
-def make_route_class(collector: StatsCollector) -> type:
-    from fastapi.routing import APIRoute  # lazy: fastapi is an optional extra
-    from starlette.requests import Request
-    from starlette.responses import Response
+_default: StatsCollector | None = None
 
-    class StatsRoute(APIRoute):
-        def get_route_handler(self) -> Callable[[Request], Awaitable[Response]]:
-            original = super().get_route_handler()
 
-            async def handler(request: Request) -> Response:
-                if collector.is_excluded(request.url.path):
-                    return await original(request)
-                start = time.perf_counter()
-                status = 500
-                try:
-                    response = await original(request)
-                    status = response.status_code
-                    return response
-                except Exception as exc:
-                    status = getattr(exc, "status_code", 500)
-                    raise
-                finally:
-                    key = collector.key_for(request.scope)
-                    if key is not None:
-                        collector.record(key, (time.perf_counter() - start) * 1000, status)
+def set_default_collector(collector: StatsCollector | None) -> None:
+    """Set (or with ``None`` reset) the process-wide collector used by the plain ``StatsRoute`` class."""
+    global _default
+    _default = collector
 
-            return handler
 
-    return StatsRoute
+def get_default_collector() -> StatsCollector:
+    """The process-wide collector; created with a default ``StatsConfig`` on first use."""
+    global _default
+    if _default is None:
+        _default = StatsCollector()
+    return _default

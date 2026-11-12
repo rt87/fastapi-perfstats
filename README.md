@@ -1,9 +1,9 @@
 # fastapi-stats
 
 [![CI](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)
+![Python](https://img.shields.io/badge/python-3.12--3.15-blue)
 ![License](https://img.shields.io/github/license/rt87/fastapi-stats)
-![Tests](https://img.shields.io/badge/tests-63%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![Status](https://img.shields.io/badge/status-prototype-orange)
@@ -33,7 +33,7 @@ errors, latency quantiles, a bounded slow-call log and a built-in HTML stats pag
 pip install "fastapi-stats[fastapi] @ git+https://github.com/rt87/fastapi-stats"
 ```
 
-Not published on PyPI. Python >= 3.12.
+Not published on PyPI. Python 3.12-3.15.
 
 ## Quick start
 
@@ -54,14 +54,18 @@ Route level (one router, or a single function):
 ```python
 from fastapi import APIRouter
 
-router = APIRouter(route_class=collector.route_class)   # every route of this router
+from fastapi_stats import StatsRoute
+
+router = APIRouter(route_class=StatsRoute)              # records into the process-wide default collector
+router = APIRouter(route_class=collector.route_class)   # or: bound to your own collector (and its config)
 
 @app.get("/one")
 @collector.track("one")                                  # a single async endpoint
 async def one(): ...
 ```
 
-Do not combine middleware and route class / decorator for the same routes (they would count twice).
+`StatsRoute` uses a default collector (plain `StatsConfig()` unless you call `set_default_collector(my_collector)`
+first); pass that same collector to `mount_stats` to see its data. Do not combine middleware and route class / decorator for the same routes (they would count twice).
 
 ## The stats page
 
