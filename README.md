@@ -243,7 +243,29 @@ StatsConfig(access=localhost_only)  # loopback clients only (127.0.0.1, ::1)
 
 ### Reset
 
-_Planned (#10)._
+`collector.reset()` clears all statistics (routes, durations, slow log, extension state) without a restart; with SQLite
+the reset is applied in order with the writer queue, so records recorded before the call are deleted and later ones
+are kept. A custom store without `reset()` raises `NotImplementedError`.
+
+With `allow_reset=True` (default `False`) the stats router also serves `POST {stats_path}/reset` and the page shows a
+"Reset statistics" button (confirm dialog, then reload). The endpoint uses the same authorization as the page and
+additionally needs the header `X-Stats-Reset: 1`: browsers send Basic credentials automatically, but an HTML form cannot
+set a custom header and a cross-origin `fetch` with it needs a CORS preflight, which is never allowed.
+
+| Result | Meaning |
+| --- | --- |
+| 204 (`Cache-Control: no-store`) | statistics cleared |
+| 400 | header `X-Stats-Reset: 1` missing |
+| 401 / 403 | authorization failed |
+| 405 | not a POST (or `allow_reset` is off: no such route) |
+| 501 | the store does not support reset |
+
+The button posts to `stats_path + "/reset"` from the config; when the router is mounted at another `path`, call the
+endpoint directly or keep both in sync. The reset path lies below `stats_path`, so it is never recorded.
+
+```bash
+curl -X POST -H "X-Stats-Reset: 1" -u admin:secret http://localhost:8000/stats/reset
+```
 
 ### Error rates and stddev
 

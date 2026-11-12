@@ -257,12 +257,12 @@ def test_page_part_and_endpoint_defaults():
     assert prometheus.ENDPOINT.enabled(StatsConfig()) is False
 
 
-def test_reset_endpoint_answers_501_and_prometheus_serves_text():
+def test_reset_endpoint_requires_header_and_prometheus_serves_text():
     async def run():
         collector = StatsCollector(StatsConfig())
         request = Request({"type": "http", "method": "POST", "path": "/stats/reset", "headers": []})
         response = await reset.ENDPOINT.handler(collector)(request)
-        assert response.status_code == 501
+        assert response.status_code == 400
         response = await prometheus.ENDPOINT.handler(collector)(request)
         assert response.status_code == 200
         assert response.media_type == "text/plain"
