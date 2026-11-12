@@ -6,6 +6,15 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "rt87", email = "rt87@users.noreply.github.com" }]
 requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Framework :: FastAPI",
+    "Development Status :: 3 - Alpha",
+]
 dependencies = ["starlette>=0.37"]
 
 [project.optional-dependencies]
