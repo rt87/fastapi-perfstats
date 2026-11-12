@@ -147,7 +147,11 @@ and call each extension's hooks with the final key (also for the `other` bucket)
 
 ### SQLite schema
 
-_Planned (#2)._
+A new or empty database file gets the core tables (`routes`, `durations`, `slow_calls`) and is stamped with
+`PRAGMA user_version = 1`. Opening a stamped file of the same version changes nothing. A file with another version, or
+with tables but no stamp, is refused with a `RuntimeError` naming the file and both versions; nothing is migrated or
+deleted, so delete the file or point `sqlite_path` elsewhere. Concurrent workers are serialised with `BEGIN IMMEDIATE`.
+Extension tables are created idempotently by their owners and are not part of the version check.
 
 ### Mounted sub-applications
 
