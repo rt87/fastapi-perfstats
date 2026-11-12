@@ -6,6 +6,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "rt87", email = "rt87@users.noreply.github.com" }]
 requires-python = ">=3.12"
+keywords = ["starlette", "fastapi", "statistics", "metrics", "latency", "slow-calls", "asgi", "middleware"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -14,8 +15,17 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
     "Framework :: FastAPI",
     "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Typing :: Typed",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
 ]
 dependencies = ["starlette>=0.37"]
+
+[project.urls]
+Homepage = "https://github.com/rt87/fastapi-stats"
+Issues = "https://github.com/rt87/fastapi-stats/issues"
+Changelog = "https://github.com/rt87/fastapi-stats/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
