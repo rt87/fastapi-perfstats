@@ -104,6 +104,21 @@ All options live in the frozen dataclass `StatsConfig`.
 | `key_func` | `None` | `scope -> key` (or `None` to skip the call) |
 | `max_key_length` | `200` | Longer keys are truncated |
 | `basic_auth` | `None` | `(user, password)` or `BasicAuth` |
+| `unmatched` | `"group"` | How unmatched requests are keyed: `group`, `raw` or `skip` (planned, #5) |
+| `close_on_shutdown` | `True` | Close the store on app shutdown (planned, #7) |
+| `access` | `None` | Extra access check `request -> bool` for the stats endpoints (planned, #9) |
+| `allow_reset` | `False` | Enable the reset endpoint (planned, #10) |
+| `slow_thresholds` | `{}` | Per-key slow thresholds in ms (planned, #12) |
+| `slow_capture_query` | `False` | Store the redacted query string with slow calls (planned, #13) |
+| `redact_query_params` | see source | Query parameter name fragments that are redacted (planned, #13) |
+| `slow_request_id_headers` | `("x-request-id", "traceparent")` | Headers tried for a request id (planned, #13) |
+| `slow_context` | `None` | Hook adding context to slow calls (planned, #13) |
+| `track_sizes` | `True` | Track request/response payload sizes (planned, #6, #14) |
+| `recent_minutes` | `60` | Minutes of recent activity kept (0..1440, 0 = off) (planned, #15) |
+| `recent_windows` | `(1, 5, 15)` | Recent windows in minutes (planned, #15) |
+| `refresh_seconds` | `None` | Live page refresh interval (`None`, 0, 5, 15, 60) (planned, #16) |
+| `prometheus` | `False` | Enable the Prometheus text endpoint (planned, #17) |
+| `prometheus_prefix` | `"fastapi_stats"` | Prometheus metric name prefix (planned, #17) |
 
 ## pg_stat-like behaviour
 
@@ -114,6 +129,76 @@ All options live in the frozen dataclass `StatsConfig`.
 - SQLite: `record()` only enqueues; one writer thread applies batches in a single transaction, so the event loop
   never waits for disk. If the queue (10 000) is full, records are dropped (`dropped` counter) rather than blocking.
   Rows are pruned to `window_size` per route and `max_slow_calls`.
+
+## Feature details
+
+### Storage
+
+_Planned (#1)._
+
+### SQLite schema
+
+_Planned (#2)._
+
+### Mounted sub-applications
+
+_Planned (#4)._
+
+### Unmatched requests
+
+_Planned (#5)._
+
+### Timing semantics
+
+_Planned (#6)._
+
+### Lifecycle
+
+_Planned (#7)._
+
+### Security headers
+
+_Planned (#8)._
+
+### Access control
+
+_Planned (#9)._
+
+### Reset
+
+_Planned (#10)._
+
+### Error rates and stddev
+
+_Planned (#11)._
+
+### Per-route slow thresholds
+
+_Planned (#12)._
+
+### Slow-call context
+
+_Planned (#13)._
+
+### Payload sizes
+
+_Planned (#14)._
+
+### Recent activity
+
+_Planned (#15)._
+
+### Live page
+
+_Planned (#16)._
+
+### Prometheus
+
+_Planned (#17)._
+
+### Overhead
+
+_Planned (#18)._
 
 ## Limits and caveats
 

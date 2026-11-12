@@ -36,6 +36,7 @@ dev = [
     "ruff>=0.6",
     "uvicorn>=0.30",
     "mypy>=2.4.1",
+    "prometheus-client>=0.20",
 ]
 
 [build-system]
@@ -65,7 +66,15 @@ files = ["src", "tests", "examples"]
 # Tests and the demo are short throwaway functions: annotating every one adds noise, not safety. They are still
 # fully type-checked (check_untyped_defs); only the "must be annotated" rules are relaxed.
 [[tool.mypy.overrides]]
-module = ["test_all", "test_stats_route", "test_without_fastapi", "test_page_columns", "demo"]
+module = [
+    "test_all", "test_stats_route", "test_without_fastapi", "test_page_columns", "demo",
+    "fakes", "test_contracts", "test_store_wiring", "test_hooks",
+    "test_sqlite_schema", "test_mounts", "test_keys", "test_middleware_timing",
+    "test_lifecycle", "test_headers", "test_auth", "test_reset",
+    "test_ext_stddev", "test_slow_thresholds", "test_slow_context", "test_ext_sizes",
+    "test_ext_recent", "test_live", "test_prometheus", "test_benchmark_smoke",
+    "test_version", "test_integration",
+]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 disallow_untyped_calls = false

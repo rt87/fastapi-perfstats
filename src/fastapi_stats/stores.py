@@ -11,20 +11,30 @@ from collections import deque
 from dataclasses import dataclass
 
 from fastapi_stats.config import StatsConfig, quantile_label
-from fastapi_stats.models import OTHER_KEY, RouteStats, SlowCall, nearest_rank
+from fastapi_stats.models import OTHER_KEY, CallRecord, RouteStats, SlowCall, nearest_rank
+from fastapi_stats.sqlite_schema import SCHEMA
 
 
 class StatsStore(ABC):
     """Minimal contract. ``record`` must be cheap and thread-safe; reads may be slower."""
 
     @abstractmethod
-    def record(self, key: str, duration_ms: float, status: int, ts: float | None = None) -> None: ...
+    def record(self, call: CallRecord) -> None: ...
 
     @abstractmethod
     def routes(self) -> list[RouteStats]: ...
 
     @abstractmethod
     def slow_calls(self) -> list[SlowCall]: ...
+
+    def reset(self) -> None:
+        """Forget all statistics. Optional; stores that support it override this."""
+        raise NotImplementedError(f"{type(self).__name__} does not support reset()")
+
+    @property
+    def dropped(self) -> int:
+        """Records dropped because the store could not keep up (0 for stores that never drop)."""
+        return 0
 
     def flush(self) -> None:  # noqa: B027 - optional hook
         """Block until everything recorded so far is visible to readers."""
@@ -80,8 +90,8 @@ class MemoryStore(StatsStore):
         self._aggs: dict[str, _Agg] = {}
         self._slow: deque[SlowCall] = deque(maxlen=config.max_slow_calls)
 
-    def record(self, key: str, duration_ms: float, status: int, ts: float | None = None) -> None:
-        ts = time.time() if ts is None else ts
+    def record(self, call: CallRecord) -> None:
+        key, duration_ms, status, ts = call.key, call.duration_ms, call.status, call.ts
         with self._lock:
             if key not in self._aggs and len(self._aggs) >= self.cfg.max_routes and key != OTHER_KEY:
                 key = OTHER_KEY
@@ -111,17 +121,6 @@ class MemoryStore(StatsStore):
 
 
 _STOP = object()
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS routes (
-    key TEXT PRIMARY KEY, count INTEGER NOT NULL, e4 INTEGER NOT NULL, e5 INTEGER NOT NULL,
-    total_ms REAL NOT NULL, min_ms REAL NOT NULL, max_ms REAL NOT NULL,
-    first_ts REAL NOT NULL, last_ts REAL NOT NULL);
-CREATE TABLE IF NOT EXISTS durations (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL, ms REAL NOT NULL);
-CREATE INDEX IF NOT EXISTS durations_key ON durations (key, id);
-CREATE TABLE IF NOT EXISTS slow_calls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, key TEXT NOT NULL,
-    ms REAL NOT NULL, status INTEGER NOT NULL);
-"""
 _UPSERT = """
 INSERT INTO routes (key, count, e4, e5, total_ms, min_ms, max_ms, first_ts, last_ts)
 VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)
@@ -149,24 +148,28 @@ class SqliteStore(StatsStore):
 
     def __init__(self, config: StatsConfig) -> None:
         self.cfg = config
-        self.dropped = 0
+        self._dropped = 0
         self._q: queue.Queue[object] = queue.Queue(self.QUEUE_SIZE)
         self._lock = threading.Lock()
         # timeout + WAL: several processes (workers) may share one file; per-process stats are not merged in memory,
         # but the SQL upserts are atomic so counts add up across processes.
         self._db = sqlite3.connect(config.sqlite_path, check_same_thread=False, timeout=10)
         self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.executescript(_SCHEMA)
+        self._db.executescript(SCHEMA)
         self._known = {r[0] for r in self._db.execute("SELECT key FROM routes")}
         self._thread = threading.Thread(target=self._run, name="fastapi-stats-writer", daemon=True)
         self._thread.start()
 
-    def record(self, key: str, duration_ms: float, status: int, ts: float | None = None) -> None:
-        item = (key, duration_ms, status, time.time() if ts is None else ts)
+    @property
+    def dropped(self) -> int:
+        return self._dropped
+
+    def record(self, call: CallRecord) -> None:
+        item = (call.key, call.duration_ms, call.status, call.ts)
         try:
             self._q.put_nowait(item)
         except queue.Full:
-            self.dropped += 1
+            self._dropped += 1
 
     def flush(self) -> None:
         if not self._thread.is_alive():

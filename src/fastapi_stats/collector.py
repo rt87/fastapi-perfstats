@@ -8,9 +8,11 @@ import time
 from collections.abc import Awaitable, Callable, Mapping
 from typing import TYPE_CHECKING, Any
 
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.types import ASGIApp
 
 from fastapi_stats.config import StatsConfig
+from fastapi_stats.middleware import StatsMiddleware
+from fastapi_stats.models import CallRecord
 from fastapi_stats.stores import StatsStore, build_store
 
 if TYPE_CHECKING:  # fastapi is only needed for typing here; the runtime import stays lazy
@@ -45,7 +47,7 @@ class StatsCollector:
         return None if key is None else key[: self.config.max_key_length]
 
     def record(self, key: str, duration_ms: float, status: int) -> None:
-        self.store.record(key, duration_ms, status)
+        self.store.record(CallRecord(key=key, duration_ms=duration_ms, status=status, ts=time.time()))
 
     # -- app/router level ------------------------------------------------------------------------------------
     @property
@@ -91,39 +93,6 @@ class StatsCollector:
             return wrapper
 
         return deco
-
-
-class StatsMiddleware:
-    """Pure ASGI middleware (no BaseHTTPMiddleware: no body buffering, no task-per-request overhead)."""
-
-    def __init__(self, app: ASGIApp, collector: StatsCollector) -> None:
-        self.app = app
-        self.collector = collector
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or self.collector.is_excluded(scope.get("path", "")):
-            await self.app(scope, receive, send)
-            return
-        status = 500  # stays 500 if the app raises before sending a response
-        started = False
-
-        async def send_wrapper(message: Message) -> None:
-            nonlocal status, started
-            if message["type"] == "http.response.start":
-                status = message["status"]
-                started = True
-            await send(message)
-
-        start = time.perf_counter()
-        try:
-            await self.app(scope, receive, send_wrapper)
-        finally:
-            elapsed = (time.perf_counter() - start) * 1000
-            if not started:
-                status = 500
-            key = self.collector.key_for(scope)  # after the call: scope["route"] is filled in by now
-            if key is not None:
-                self.collector.record(key, elapsed, status)
 
 
 def import_route_module() -> ModuleType:

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from starlette.types import ASGIApp
 
+from fakes import make_call
 from fastapi_stats import (
     MemoryStore,
     SqliteStore,
@@ -291,9 +292,9 @@ def store(request, tmp_path):
 def test_store_basic_stats(store):
     s = store(slow_threshold_ms=50)
     for ms in (10, 20, 30, 40, 100):
-        s.record("GET /a", ms, 200)
-    s.record("GET /a", 5, 404)
-    s.record("GET /a", 5, 500)
+        s.record(make_call("GET /a", ms, 200))
+    s.record(make_call("GET /a", 5, 404))
+    s.record(make_call("GET /a", 5, 500))
     (r,) = s.routes()
     assert (r.count, r.errors_4xx, r.errors_5xx, r.min_ms, r.max_ms) == (7, 1, 1, 5, 100)
     assert r.mean_ms == pytest.approx(210 / 7)
@@ -304,7 +305,7 @@ def test_store_basic_stats(store):
 def test_store_window_limit(store):
     s = store(window_size=3)
     for ms in (1000, 1, 2, 3):
-        s.record("k", ms, 200)
+        s.record(make_call("k", ms, 200))
     (r,) = s.routes()
     assert r.count == 4 and r.max_ms == 1000  # all-time aggregates survive
     assert r.quantiles["p99"] == 3  # but quantiles only see the last 3 durations
@@ -313,7 +314,7 @@ def test_store_window_limit(store):
 def test_store_route_cap(store):
     s = store(max_routes=2)
     for k in "abcde":
-        s.record(k, 1, 200)
+        s.record(make_call(k, 1, 200))
     keys = {r.key: r.count for r in s.routes()}
     assert keys == {"a": 1, "b": 1, OTHER_KEY: 3}
 
@@ -321,7 +322,7 @@ def test_store_route_cap(store):
 def test_store_slow_log_bounded_most_recent_kept(store):
     s = store(slow_threshold_ms=1, max_slow_calls=3)
     for i in range(10):
-        s.record("k", 10 + i, 200, ts=1000 + i)
+        s.record(make_call("k", 10 + i, 200, ts=1000 + i))
     slow = s.slow_calls()
     assert [c.duration_ms for c in slow] == [19, 18, 17]  # newest first
 
@@ -337,7 +338,7 @@ def test_sqlite_prunes_rows_and_persists(tmp_path):
     )
     s = SqliteStore(cfg)
     for i in range(50):
-        s.record(f"k{i % 4}", 1.0, 200)
+        s.record(make_call(f"k{i % 4}", 1.0, 200))
     counts = s.row_counts()
     assert counts["routes"] == 3 and counts["durations"] <= 5 * 3 and counts["slow_calls"] == 4
     s.close()
@@ -352,7 +353,7 @@ def test_sqlite_queue_full_drops(tmp_path):
     full: queue.Queue[object] = queue.Queue(1)
     full.put("filler")
     real_q, s._q = s._q, full  # writer keeps draining the real queue; records go to the full one
-    s.record("k", 1, 200)
+    s.record(make_call("k", 1, 200))
     assert s.dropped == 1
     s._q = real_q
     s.close()
@@ -362,7 +363,7 @@ def test_sqlite_flush_after_close_and_write_error(tmp_path):
     s = SqliteStore(StatsConfig(storage="sqlite", sqlite_path=str(tmp_path / "e.db")))
     s._apply([])  # empty batch no-op
     s._db.execute("DROP TABLE durations")  # force sqlite error in writer -> rolled back, thread survives
-    s.record("k", 1, 200)
+    s.record(make_call("k", 1, 200))
     s.flush()
     assert s._thread.is_alive()
     s.close()
@@ -383,7 +384,7 @@ def test_memory_store_thread_safety():
 
     def work() -> None:
         for _ in range(500):
-            s.record("k", 1, 200)
+            s.record(make_call("k", 1, 200))
 
     ts = [threading.Thread(target=work) for _ in range(8)]
     for t in ts:
@@ -405,7 +406,7 @@ def test_html_escapes_malicious_key():
     app, c = make_app()
     evil = "/<script>alert(1)</script>\"'"
     TestClient(app).get(evil)
-    c.store.record("GET <img src=x onerror=alert(1)>", 1, 200)
+    c.store.record(make_call("GET <img src=x onerror=alert(1)>", 1, 200))
     html = TestClient(app).get("/stats").text
     assert "<script>alert(1)" not in html and "<img src=x" not in html
     assert "&lt;img src=x onerror=alert(1)&gt;" in html

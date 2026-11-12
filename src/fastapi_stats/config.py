@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+import re
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Literal
+
+from starlette.requests import Request
 
 DEFAULT_QUANTILES: tuple[float, ...] = (0.5, 0.95, 0.99)
 
 KeyFunc = Callable[[Mapping[str, Any]], "str | None"]
+AccessCheck = Callable[[Request], "bool | Awaitable[bool]"]
+SlowContextFunc = Callable[[Mapping[str, Any]], Mapping[str, str]]
+
+_PROMETHEUS_NAME = re.compile(r"[a-zA-Z_:][a-zA-Z0-9_:]*")
+_REFRESH_CHOICES = (None, 0, 5, 15, 60)
+_UNMATCHED_CHOICES = ("group", "raw", "skip")
 
 
 @dataclass(frozen=True)
@@ -37,6 +47,21 @@ class StatsConfig:
     basic_auth: ``(user, password)`` or ``BasicAuth``; protects the HTML page and the JSON endpoint
         (``secrets.compare_digest``, 401 + ``WWW-Authenticate``). ``None`` = no auth (a warning is logged on mount).
     max_key_length: keys longer than this are truncated (defence against huge raw paths).
+    unmatched: how requests without a matching route are keyed: ``"group"``, ``"raw"`` or ``"skip"`` (#5).
+    close_on_shutdown: close the store when the app shuts down (#7).
+    access: optional extra access check ``request -> bool`` (may be async) for the stats endpoints (#9).
+    allow_reset: enable the reset endpoint (#10).
+    slow_thresholds: per-key slow thresholds in ms (``None`` = never slow); keys non-empty, values >= 0 (#12).
+    slow_capture_query: store the (redacted) query string with slow calls (#13).
+    redact_query_params: query parameter name fragments whose values are redacted; lower-cased (#13).
+    slow_request_id_headers: request headers tried in order for a request id; lower-cased (#13).
+    slow_context: optional ``scope -> {name: value}`` hook adding context to slow calls (#13).
+    track_sizes: track request/response payload sizes (#6, #14).
+    recent_minutes: minutes of recent activity kept, 0..1440; 0 disables (#15).
+    recent_windows: recent windows in minutes, each 1..recent_minutes; sorted, unique (#15).
+    refresh_seconds: live page refresh interval: ``None``, 0, 5, 15 or 60 (#16).
+    prometheus: enable the Prometheus text endpoint (#17).
+    prometheus_prefix: metric name prefix, ``[a-zA-Z_:][a-zA-Z0-9_:]*`` (#17).
     """
 
     quantiles: tuple[float, ...] = DEFAULT_QUANTILES
@@ -51,6 +76,21 @@ class StatsConfig:
     key_func: KeyFunc | None = None
     max_key_length: int = 200
     basic_auth: BasicAuth | tuple[str, str] | None = None
+    unmatched: Literal["group", "raw", "skip"] = "group"
+    close_on_shutdown: bool = True
+    access: AccessCheck | None = None
+    allow_reset: bool = False
+    slow_thresholds: Mapping[str, float | None] = field(default_factory=dict)
+    slow_capture_query: bool = False
+    redact_query_params: tuple[str, ...] = ("pass", "tok", "secret", "key", "auth", "sig", "session", "code")
+    slow_request_id_headers: tuple[str, ...] = ("x-request-id", "traceparent")
+    slow_context: SlowContextFunc | None = None
+    track_sizes: bool = True
+    recent_minutes: int = 60
+    recent_windows: tuple[int, ...] = (1, 5, 15)
+    refresh_seconds: int | None = None
+    prometheus: bool = False
+    prometheus_prefix: str = "fastapi_stats"
 
     def __post_init__(self) -> None:
         if isinstance(self.basic_auth, tuple):
@@ -65,6 +105,32 @@ class StatsConfig:
             raise ValueError("slow_threshold_ms must be >= 0 or None")
         if not self.stats_path.startswith("/"):
             raise ValueError("stats_path must start with '/'")
+        if self.unmatched not in _UNMATCHED_CHOICES:
+            raise ValueError("unmatched must be one of 'group', 'raw', 'skip'")
+        if any(not key for key in self.slow_thresholds):
+            raise ValueError("slow_thresholds keys must be non-empty")
+        if any(v is not None and v < 0 for v in self.slow_thresholds.values()):
+            raise ValueError("slow_thresholds values must be >= 0 or None")
+        object.__setattr__(self, "slow_thresholds", MappingProxyType(dict(self.slow_thresholds)))
+        object.__setattr__(self, "redact_query_params", tuple(p.lower() for p in self.redact_query_params))
+        object.__setattr__(self, "slow_request_id_headers", tuple(h.lower() for h in self.slow_request_id_headers))
+        if not 0 <= self.recent_minutes <= 1440:
+            raise ValueError("recent_minutes must be between 0 and 1440")
+        if self.recent_minutes and any(not 1 <= w <= self.recent_minutes for w in self.recent_windows):
+            raise ValueError("recent_windows values must be between 1 and recent_minutes")
+        object.__setattr__(self, "recent_windows", tuple(sorted(set(self.recent_windows))))
+        if self.refresh_seconds not in _REFRESH_CHOICES:
+            raise ValueError("refresh_seconds must be None, 0, 5, 15 or 60")
+        if not _PROMETHEUS_NAME.fullmatch(self.prometheus_prefix):
+            raise ValueError("prometheus_prefix must match [a-zA-Z_:][a-zA-Z0-9_:]*")
+
+    def slow_threshold_for(self, key: str) -> float | None:
+        """Slow threshold in ms for ``key`` (``None`` = never slow). Stub: the global threshold (#12)."""
+        return self.slow_threshold_ms
+
+    def slow_threshold_summary(self) -> str:
+        """Heading text for the slow-call table. Stub: today's text (#12)."""
+        return "disabled" if self.slow_threshold_ms is None else f">= {self.slow_threshold_ms:g} ms"
 
     @property
     def credentials(self) -> BasicAuth | None:

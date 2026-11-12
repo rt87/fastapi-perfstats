@@ -1,37 +1,65 @@
 """fastapi-stats: per-route call statistics, slow-call log and a stats page (prototype)."""
 
+import importlib.metadata
 from typing import Any
 
+from fastapi_stats.auth import localhost_only
 from fastapi_stats.collector import (
     StatsCollector,
-    StatsMiddleware,
     get_default_collector,
     import_route_module,
     set_default_collector,
 )
-from fastapi_stats.config import DEFAULT_QUANTILES, BasicAuth, StatsConfig
-from fastapi_stats.models import OTHER_KEY, RouteStats, SlowCall
+from fastapi_stats.config import DEFAULT_QUANTILES, AccessCheck, BasicAuth, StatsConfig
+from fastapi_stats.middleware import StatsMiddleware
+from fastapi_stats.models import (
+    CLIENT_CLOSED_STATUS,
+    OTHER_KEY,
+    OTHER_METHOD,
+    UNMATCHED_ROUTE,
+    CallRecord,
+    RecentStats,
+    RouteStats,
+    SlowCall,
+    SlowExtra,
+)
 from fastapi_stats.page import mount_stats, render_html, render_json, stats_router
+from fastapi_stats.prometheus import render_prometheus
 from fastapi_stats.stores import MemoryStore, SqliteStore, StatsStore
 
+try:
+    __version__ = importlib.metadata.version("fastapi-stats")
+except importlib.metadata.PackageNotFoundError:  # pragma: no cover - only when run from an uninstalled checkout
+    __version__ = "0+unknown"
+
 __all__ = [
-    "BasicAuth",
+    "CLIENT_CLOSED_STATUS",
     "DEFAULT_QUANTILES",
     "OTHER_KEY",
+    "OTHER_METHOD",
+    "UNMATCHED_ROUTE",
+    "AccessCheck",
+    "BasicAuth",
+    "CallRecord",
     "MemoryStore",
+    "RecentStats",
     "RouteStats",
     "SlowCall",
+    "SlowExtra",
     "SqliteStore",
     "StatsCollector",
     "StatsConfig",
     "StatsMiddleware",
     "StatsStore",
     "StatsRoute",
+    "__version__",
     "get_default_collector",
+    "localhost_only",
     "make_route_class",
     "mount_stats",
     "render_html",
     "render_json",
+    "render_prometheus",
     "set_default_collector",
     "stats_router",
 ]

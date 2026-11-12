@@ -2,6 +2,7 @@ import re
 
 import pytest
 
+from fakes import make_call
 from fastapi_stats import StatsCollector, StatsConfig, render_html, render_json
 from fastapi_stats.page import split_key
 
@@ -23,9 +24,9 @@ def test_split_key(key, expected):
 
 def make():
     c = StatsCollector(StatsConfig(slow_threshold_ms=0))
-    c.store.record("GET /items/{id}", 5, 200)
-    c.store.record("POST /items", 7, 500)
-    c.store.record("other", 1, 200)
+    c.store.record(make_call("GET /items/{id}", 5, 200))
+    c.store.record(make_call("POST /items", 7, 500))
+    c.store.record(make_call("other", 1, 200))
     return c
 
 
@@ -43,8 +44,8 @@ def test_html_has_method_and_route_columns_in_all_three_tables():
 
 def test_html_escapes_method_and_route_cells():
     c = StatsCollector()
-    c.store.record("GET <b>x</b>", 1, 200)
-    c.store.record("PO<i>ST /y", 1, 200)  # not a plain method -> whole key is the route, still escaped
+    c.store.record(make_call("GET <b>x</b>", 1, 200))
+    c.store.record(make_call("PO<i>ST /y", 1, 200))  # not a plain method -> whole key is the route, still escaped
     html = render_html(c)
     assert "<b>x</b>" not in html and "<i>" not in html
     assert "<td>GET</td><td>&lt;b&gt;x&lt;/b&gt;</td>" in html
