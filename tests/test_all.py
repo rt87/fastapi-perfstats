@@ -67,7 +67,7 @@ def make_app(cfg: StatsConfig | None = None, **kw):
 
     @app.get("/slow")
     async def slow():
-        await asyncio.sleep(0.03)
+        await asyncio.sleep(0.3)  # 3x the threshold in test_slow_threshold: scheduler jitter cannot flip it
         return 1
 
     return app, collector
@@ -158,12 +158,12 @@ def test_nearest_rank():
 
 
 def test_slow_threshold():
-    app, c = make_app(slow_threshold_ms=20)
+    app, c = make_app(slow_threshold_ms=100)  # /items/1 takes ~1 ms (100x margin), /slow sleeps 300 ms (3x margin)
     cl = TestClient(app)
     cl.get("/items/1")
     cl.get("/slow")
     slow = c.store.slow_calls()
-    assert [s.key for s in slow] == ["GET /slow"] and slow[0].duration_ms >= 20 and slow[0].status == 200
+    assert [s.key for s in slow] == ["GET /slow"] and slow[0].duration_ms >= 100 and slow[0].status == 200
 
 
 def test_slow_disabled_and_zero_threshold():

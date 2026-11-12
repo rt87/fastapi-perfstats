@@ -35,7 +35,7 @@ async def echo(request: Request) -> Response:
 
 
 async def slow(request: Request) -> Response:
-    time.sleep(0.03)
+    time.sleep(0.05)
     return JSONResponse({"slow": True})
 
 
