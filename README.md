@@ -190,7 +190,25 @@ that run afterwards are not counted, while a streaming response is measured incl
 
 ### Lifecycle
 
-_Planned (#7)._
+`StatsMiddleware` handles the ASGI lifespan: when the app reports `lifespan.shutdown.complete` or
+`lifespan.shutdown.failed`, the store is closed first (in a worker thread, as it may wait up to 10 s for the SQLite
+writer), so queued records are persisted. Set `close_on_shutdown=False` to leave the store open. `close()` may be
+called more than once.
+
+If you only use `StatsRoute` or `track()` (no middleware), close the collector yourself:
+
+```python
+@asynccontextmanager
+async def lifespan(app):
+    yield
+    collector.close()
+
+
+app = FastAPI(lifespan=lifespan)
+```
+
+Records the SQLite writer queue could not take are counted: the JSON has `"dropped"` and the page shows
+`N records dropped (writer queue full)` when it is above 0.
 
 ### Security headers
 
