@@ -7,13 +7,16 @@ import binascii
 import contextlib
 import logging
 import secrets
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
 from html import escape
 from typing import Any
 
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
+from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from starlette.routing import Route, Router
 
 from fastapi_stats.collector import StatsCollector
 from fastapi_stats.config import BasicAuth, quantile_label
@@ -58,26 +61,22 @@ document.querySelectorAll('input.f').forEach(function(inp){
 """
 
 
-def _basic_auth_dependency(auth: BasicAuth) -> Callable[..., None]:
-    from fastapi import HTTPException
-
-    expected_user = auth.username.encode()
-    expected_pw = auth.password.encode()
-
-    def check(request: Request) -> None:
-        user, pw = b"", b""
-        header = request.headers.get("authorization", "")
-        scheme, _, token = header.partition(" ")
-        if scheme.lower() == "basic":
-            with contextlib.suppress(binascii.Error, ValueError):
-                user, _, pw = base64.b64decode(token, validate=True).partition(b":")
-        # both compares always run (no short-circuit) so timing does not reveal which part was wrong
-        ok_user = secrets.compare_digest(user, expected_user)
-        ok_pw = secrets.compare_digest(pw, expected_pw)
-        if not (ok_user and ok_pw):
-            raise HTTPException(401, "Unauthorized", headers={"WWW-Authenticate": 'Basic realm="stats"'})
-
-    return check
+def _check_basic_auth(request: Request, auth: BasicAuth | None) -> Response | None:
+    """``None`` if the request may pass, else a 401 response."""
+    if auth is None:
+        return None
+    user, pw = b"", b""
+    header = request.headers.get("authorization", "")
+    scheme, _, token = header.partition(" ")
+    if scheme.lower() == "basic":
+        with contextlib.suppress(binascii.Error, ValueError):
+            user, _, pw = base64.b64decode(token, validate=True).partition(b":")
+    # both compares always run (no short-circuit) so timing does not reveal which part was wrong
+    ok_user = secrets.compare_digest(user, auth.username.encode())
+    ok_pw = secrets.compare_digest(pw, auth.password.encode())
+    if ok_user and ok_pw:
+        return None
+    return PlainTextResponse("Unauthorized", 401, headers={"WWW-Authenticate": 'Basic realm="stats"'})
 
 
 def _num(v: float, digits: int = 2) -> str:
@@ -170,37 +169,38 @@ def render_json(collector: StatsCollector) -> dict[str, Any]:
 def stats_router(
     collector: StatsCollector, path: str | None = None, dependencies: Sequence[Any] | None = None
 ) -> Any:
-    """Build an ``APIRouter`` serving the page at ``path`` and JSON at ``path + ".json"``.
+    """Build a router serving the page at ``path`` and JSON at ``path + ".json"``.
 
-    ``dependencies`` (e.g. ``[Depends(require_admin)]``) are applied to both routes. The page exposes your
-    route structure and timings: do NOT leave it public.
+    Without ``dependencies`` this is a plain Starlette ``Router`` (no fastapi import). With FastAPI
+    ``dependencies`` (e.g. ``[Depends(require_admin)]``) a FastAPI ``APIRouter`` is built instead (imports fastapi
+    only then). Basic auth from the config applies in both cases. The page exposes your route structure and
+    timings: do NOT leave it public.
     """
-    from fastapi import APIRouter, Depends
-    from fastapi.responses import HTMLResponse, JSONResponse
-    from starlette.concurrency import run_in_threadpool
-
     p = (path or collector.config.stats_path).rstrip("/") or "/"
-    deps = list(dependencies or [])
     auth = collector.config.basic_auth
-    if auth is not None:
-        deps.insert(0, Depends(_basic_auth_dependency(auth)))
-    elif not deps:
+    if auth is None and not dependencies:
         log.warning("fastapi-stats: stats page at %s is mounted WITHOUT authentication", p)
-    router = APIRouter(dependencies=deps, include_in_schema=False)
 
-    @router.get(p, response_class=HTMLResponse)
-    async def stats_page() -> HTMLResponse:
-        return HTMLResponse(await run_in_threadpool(render_html, collector))
+    async def stats_page(request: Request) -> Response:
+        return _check_basic_auth(request, auth) or HTMLResponse(await run_in_threadpool(render_html, collector))
 
-    @router.get(p + ".json")
-    async def stats_json() -> JSONResponse:
-        return JSONResponse(await run_in_threadpool(render_json, collector))
+    async def stats_json(request: Request) -> Response:
+        return _check_basic_auth(request, auth) or JSONResponse(await run_in_threadpool(render_json, collector))
 
-    return router
+    if dependencies:
+        try:
+            from fastapi import APIRouter
+        except ImportError as exc:
+            raise ImportError("stats_router(dependencies=...) needs FastAPI installed") from exc
+        router = APIRouter(dependencies=list(dependencies), include_in_schema=False)
+        router.add_api_route(p, stats_page, methods=["GET"], response_class=HTMLResponse)
+        router.add_api_route(p + ".json", stats_json, methods=["GET"])
+        return router
+    return Router(routes=[Route(p, stats_page, methods=["GET"]), Route(p + ".json", stats_json, methods=["GET"])])
 
 
 def mount_stats(
     app: Any, collector: StatsCollector, path: str | None = None, dependencies: Sequence[Any] | None = None
 ) -> None:
-    """``app.include_router(stats_router(...))`` in one call."""
-    app.include_router(stats_router(collector, path, dependencies))
+    """Add the stats routes to a Starlette or FastAPI ``app``."""
+    app.router.routes.extend(stats_router(collector, path, dependencies).routes)

@@ -3,7 +3,7 @@
 [![CI](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.12--3.15-blue)
 ![License](https://img.shields.io/github/license/rt87/fastapi-stats)
-![Tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-70%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![Status](https://img.shields.io/badge/status-prototype-orange)
@@ -25,15 +25,20 @@ errors, latency quantiles, a bounded slow-call log and a built-in HTML stats pag
 - Storage: in-memory (default) or SQLite (stdlib), both size-bounded, behind one small ABC.
 - Slow-call log with a configurable threshold.
 - HTML page (sortable, filterable, dark/light, no external assets) plus JSON, optional HTTP Basic auth.
-- Runtime dependency: `starlette` only (`fastapi` for the page / route class).
+- Runtime dependency: `starlette` only; works on Starlette and FastAPI apps.
 
 ## Install
 
 ```bash
-pip install "fastapi-stats[fastapi] @ git+https://github.com/rt87/fastapi-stats"
+pip install fastapi-stats
+# until it is released, straight from the repository:
+pip install "git+https://github.com/rt87/fastapi-stats"
 ```
 
-Not published on PyPI. Python 3.12-3.15.
+Python 3.12-3.15. The only dependency is `starlette`; `fastapi-stats` never depends on `fastapi` (so a future
+`fastapi[fastapi-stats]` extra stays possible). Middleware, the stats page and `mount_stats` work on plain Starlette
+apps; only `StatsRoute` / `collector.route_class` and `dependencies=[Depends(...)]` need FastAPI installed (clear
+`ImportError` otherwise).
 
 ## Quick start
 

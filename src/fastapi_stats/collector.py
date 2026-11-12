@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import importlib
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
@@ -57,9 +58,7 @@ class StatsCollector:
     @property
     def route_class(self) -> type:
         """``APIRouter(route_class=collector.route_class)`` or ``@router.get(..., route_class_override=...)``."""
-        from fastapi_stats.route import make_route_class  # lazy: needs fastapi
-
-        return make_route_class(self)
+        return import_route_module().make_route_class(self)
 
     def track(
         self, name: str | None = None
@@ -119,6 +118,14 @@ class StatsMiddleware:
             key = self.collector.key_for(scope)  # after the call: scope["route"] is filled in by now
             if key is not None:
                 self.collector.record(key, elapsed, status)
+
+
+def import_route_module() -> Any:
+    """Import ``fastapi_stats.route`` (needs FastAPI) with a clear error if FastAPI is missing."""
+    try:
+        return importlib.import_module("fastapi_stats.route")
+    except ImportError as exc:
+        raise ImportError("StatsRoute needs FastAPI installed (pip install fastapi)") from exc
 
 
 _default: StatsCollector | None = None
