@@ -238,6 +238,9 @@ def test_every_stub_satisfies_extension(ext: Extension):
     expected = make_route_stats()
     if ext.name == "stddev":  # real behaviour (#11): one 10 ms call has a stddev of 0.0, rates stay 0.0
         expected.stddev_ms = 0.0
+    if ext.name == "recent":  # real behaviour (#15): windows and a zero-filled series are always filled in
+        assert set(row.recent) == {"1m", "5m", "15m"} and row.series == [0] * 60
+        row.recent, row.series = {}, []
     assert row == expected
     db.close()
 

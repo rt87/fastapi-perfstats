@@ -281,7 +281,16 @@ _Planned (#14)._
 
 ### Recent activity
 
-_Planned (#15)._
+Everything else is all-time; the recent columns show what happens now, like a load average. Calls are counted in
+one-minute buckets (wall clock, `int(ts // 60)`); `recent_minutes` (default 60, max 1440, `0` turns the feature off)
+buckets are kept per route, and `recent_windows` (default `(1, 5, 15)`) picks the windows. The frequency table adds
+`Calls/min (Nm)` per window and `5xx % (Nm)` for the largest window; the plain `Calls/min` is then labelled
+`Calls/min (all)`. The JSON has `recent` (`"1m"`, `"5m"`, ... with `calls`, `calls_per_min`, `errors_5xx`,
+`error_rate_5xx`, `mean_ms`) and `series` (per-minute counts, oldest first, zero-filled, `recent_minutes` long) per
+route. A window covers the current, partial minute plus the previous `N - 1`; for a route younger than the window the
+rate is divided by its age. A timestamp that goes backwards (clock change) is counted in the newest bucket. SQLite keeps
+the buckets in the table `ext_recent`, pruned on every write batch; with several worker processes the counts add up.
+Recent quantiles are not offered (they would need histograms).
 
 ### Live page
 
