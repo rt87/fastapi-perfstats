@@ -34,6 +34,7 @@ class StatsMiddleware:
         disconnected = False
         end = 0.0
         track_sizes = self.collector.config.track_sizes
+        count_body = scope.get("method") != "HEAD"  # servers drop the body of a HEAD response: it is not sent
         request_bytes = 0
         response_bytes = 0
 
@@ -53,7 +54,7 @@ class StatsMiddleware:
                 status = message["status"]
                 started = True
             elif message["type"] == "http.response.body":
-                if track_sizes:
+                if track_sizes and count_body:
                     response_bytes += len(message.get("body", b""))
                 if not completed and not message.get("more_body", False):
                     end = time.perf_counter()

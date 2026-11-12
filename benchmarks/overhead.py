@@ -3,7 +3,7 @@
 Drives ASGI apps directly with an in-process fake ``receive``/``send`` (no HTTP client, no network), so it measures
 the middleware / route class, not the client. Numbers are indicative only.
 
-Usage: ``uv run python benchmarks/overhead.py [--n 20000] [--repeats 5] [--json]``
+Usage: ``uv run python benchmarks/overhead.py [--n 5000] [--repeats 5] [--json]``
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from starlette.routing import Route
 
 from fastapi_stats import StatsCollector, StatsConfig
 
-DEFAULT_N = 20_000
+DEFAULT_N = 5_000
 DEFAULT_REPEATS = 5
 WARMUP = 2_000
 PATH = "/items/1"

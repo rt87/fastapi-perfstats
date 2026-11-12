@@ -31,10 +31,11 @@ def collector(**config):
     return c
 
 
-def test_no_selector_by_default():
+def test_selector_is_always_rendered_and_off_by_default():
     html = render_html(collector())
-    assert 'id="refresh"' not in html
-    assert "data-refresh" not in html
+    assert 'id="refresh"' in html
+    assert 'data-refresh="0"' in html
+    assert re.findall(r'<option value="(\d+)" selected>', html) == ["0"]
 
 
 @pytest.mark.parametrize("seconds", [0, 5, 15, 60])

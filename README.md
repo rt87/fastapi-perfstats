@@ -104,21 +104,21 @@ All options live in the frozen dataclass `StatsConfig`.
 | `key_func` | `None` | `scope -> key` (or `None` to skip the call) |
 | `max_key_length` | `200` | Longer keys are truncated |
 | `basic_auth` | `None` | `(user, password)` or `BasicAuth` |
-| `unmatched` | `"group"` | How unmatched requests are keyed: `group`, `raw` or `skip` (planned, #5) |
-| `close_on_shutdown` | `True` | Close the store on app shutdown (planned, #7) |
-| `access` | `None` | Extra access check `request -> bool` for the stats endpoints (planned, #9) |
-| `allow_reset` | `False` | Enable the reset endpoint (planned, #10) |
-| `slow_thresholds` | `{}` | Per-key slow thresholds in ms (planned, #12) |
-| `slow_capture_query` | `False` | Store the redacted query string with slow calls (planned, #13) |
-| `redact_query_params` | see source | Query parameter name fragments that are redacted (planned, #13) |
-| `slow_request_id_headers` | `("x-request-id", "traceparent")` | Headers tried for a request id (planned, #13) |
-| `slow_context` | `None` | Hook adding context to slow calls (planned, #13) |
-| `track_sizes` | `True` | Track request/response payload sizes (planned, #6, #14) |
-| `recent_minutes` | `60` | Minutes of recent activity kept (0..1440, 0 = off) (planned, #15) |
-| `recent_windows` | `(1, 5, 15)` | Recent windows in minutes (planned, #15) |
-| `refresh_seconds` | `None` | Live page refresh interval (`None`, 0, 5, 15, 60) (planned, #16) |
-| `prometheus` | `False` | Enable the Prometheus text endpoint (planned, #17) |
-| `prometheus_prefix` | `"fastapi_stats"` | Prometheus metric name prefix (planned, #17) |
+| `unmatched` | `"group"` | How unmatched requests are keyed: `group`, `raw` or `skip` |
+| `close_on_shutdown` | `True` | Close the store on app shutdown |
+| `access` | `None` | Extra access check `request -> bool` for the stats endpoints |
+| `allow_reset` | `False` | Enable the reset endpoint |
+| `slow_thresholds` | `{}` | Per-key slow thresholds in ms |
+| `slow_capture_query` | `False` | Store the redacted query string with slow calls |
+| `redact_query_params` | see source | Query parameter name fragments that are redacted |
+| `slow_request_id_headers` | `("x-request-id", "traceparent")` | Headers tried for a request id |
+| `slow_context` | `None` | Hook adding context to slow calls |
+| `track_sizes` | `True` | Track request/response payload sizes |
+| `recent_minutes` | `60` | Minutes of recent activity kept (0..1440, 0 = off) |
+| `recent_windows` | `(1, 5, 15)` | Recent windows in minutes |
+| `refresh_seconds` | `None` | Initial value of the page's auto-refresh selector (`None`/0 = Off, 5, 15, 60) |
+| `prometheus` | `False` | Enable the Prometheus text endpoint |
+| `prometheus_prefix` | `"fastapi_stats"` | Prometheus metric name prefix |
 
 ## pg_stat-like behaviour
 
@@ -260,8 +260,8 @@ set a custom header and a cross-origin `fetch` with it needs a CORS preflight, w
 | 405 | not a POST (or `allow_reset` is off: no such route) |
 | 501 | the store does not support reset |
 
-The button posts to `stats_path + "/reset"` from the config; when the router is mounted at another `path`, call the
-endpoint directly or keep both in sync. The reset path lies below `stats_path`, so it is never recorded.
+The button posts to the page's own URL plus `/reset` (taken from `location.pathname` in the browser), so it is right
+for any `path`, mount prefix or proxy root path. The reset path lies below `stats_path`, so it is never recorded.
 
 ```bash
 curl -X POST -H "X-Stats-Reset: 1" -u admin:secret http://localhost:8000/stats/reset
@@ -324,7 +324,8 @@ With `track_sizes=True` (default) the middleware sums the request body bytes and
 
 - Only calls with both sizes known contribute; `StatsRoute`, `track()` and `track_sizes=False` leave them unknown, shown
   as `n/a` (`None` in JSON).
-- Sizes are body bytes before/after any compression by an outer layer, without headers.
+- Sizes are body bytes before/after any compression by an outer layer, without headers. The body of a `HEAD` response
+  is not counted (servers do not send it).
 - SQLite keeps the aggregates in its own table `ext_sizes` (one row per route).
 
 ### Recent activity
@@ -342,8 +343,8 @@ Recent quantiles are not offered (they would need histograms).
 
 ### Live page
 
-Set `refresh_seconds` (`0`, `5`, `15` or `60`) to add an auto-refresh selector (Off / 5 s / 15 s / 60 s) to the page;
-`None` (default) renders no selector, `0` renders it initially off. The choice is remembered in the browser
+The page has an auto-refresh selector (Off / 5 s / 15 s / 60 s); `refresh_seconds` (`0`, `5`, `15` or `60`) sets its
+initial value, `None` (default) and `0` start it Off. The choice is remembered in the browser
 (`localStorage`). A refresh fetches the page again and swaps the table bodies, so sort order and filter text are kept;
 if the fetch fails a "refresh failed" note appears and the old data stays.
 
@@ -354,8 +355,9 @@ With `recent_minutes > 0` the frequency table gets a `Last N min` column: an inl
 
 Set `prometheus=True` to serve the statistics in the Prometheus text format at `{stats_path}/metrics` (protected like
 the other stats endpoints, not recorded itself). Metric names start with `prometheus_prefix` (default `fastapi_stats`):
-`_requests_total`, `_responses_errors_total{status_class}`, `_request_duration_seconds` (summary) and, once the store
-has dropped something, `_dropped_records_total`. Labels are `method` and `route`.
+`_requests_total`, `_responses_errors_total{status_class}`, `_request_duration_seconds` (summary) and `_dropped_records_total`
+(always exposed, 0 until the store drops something). All families keep their HELP/TYPE lines even before the first
+request. Labels are `method` and `route`.
 
 ```yaml
 scrape_configs:
@@ -372,9 +374,9 @@ use prometheus-fastapi-instrumentator or prometheus-client histograms.
 ### Overhead
 
 `benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median microseconds
-per request over 5 repeats of 20 000 requests (after 2 000 warm-up requests):
+per request over 5 repeats of 5 000 requests (after 2 000 warm-up requests; a full run takes about 20 s):
 `uv run python benchmarks/overhead.py [--n N] [--repeats R] [--json]`. One run on Python 3.14, Windows 11, a
-laptop-class Intel CPU:
+laptop-class Intel CPU (measured with 20 000 requests per repeat; the default is now smaller to keep a run short):
 
 | Scenario | us/request | delta vs bare |
 | --- | ---: | ---: |
@@ -394,7 +396,6 @@ FastAPI deltas in particular vary between runs). The `Benchmark` workflow can ru
   same file (WAL, atomic upserts, counts add up); in-memory shows only the own process.
 - Prototype: API may change; not load-tested. SQLite stats can lose the last few records on a hard crash.
 - Unmatched paths (404s) are keyed by raw path until `max_routes` is reached, then bucketed as `other`.
-- Mounted sub-applications are keyed by the inner route template as set in `scope["route"]`, if any.
 
 ## Development
 

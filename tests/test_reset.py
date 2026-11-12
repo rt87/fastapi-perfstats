@@ -121,15 +121,29 @@ def test_button_only_when_enabled() -> None:
     off = StatsCollector(StatsConfig())
     on = StatsCollector(StatsConfig(allow_reset=True))
     assert "Reset statistics" not in render_html(off)
-    assert 'data-reset-url="' not in render_html(off)
     html = render_html(on)
     assert '<button type="button" id="stats-reset">Reset statistics</button>' in html
-    assert 'data-reset-url="/stats/reset"' in html
+    assert "data-reset-url" not in html
 
 
-def test_reset_url_follows_stats_path() -> None:
-    html = render_html(StatsCollector(StatsConfig(allow_reset=True, stats_path="/admin/stats/")))
-    assert 'data-reset-url="/admin/stats/reset"' in html
+def test_reset_url_comes_from_the_page_location() -> None:
+    # the page URL already holds the mount prefix and root path, so the script derives the endpoint from it
+    assert "location.pathname" in reset.PART.js and "'/reset'" in reset.PART.js
+
+
+@pytest.mark.parametrize("prefix", ["", "/api"])
+def test_reset_works_wherever_the_router_is_mounted(prefix: str) -> None:
+    from starlette.routing import Mount
+
+    collector = StatsCollector(StatsConfig(allow_reset=True))
+    inner = Starlette()
+    mount_stats(inner, collector, path="/admin/stats/")
+    app = Starlette(routes=[Mount(prefix, app=inner)] if prefix else inner.routes)
+    client = TestClient(app)
+    collector.record_call(make_call())
+    assert client.get(f"{prefix}/admin/stats").status_code == 200
+    assert client.post(f"{prefix}/admin/stats/reset", headers=GUARD).status_code == 204
+    assert collector.store.routes() == []
 
 
 def test_script_confirms_and_sends_header() -> None:

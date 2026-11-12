@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse, Response
+from starlette.responses import Response
 
 from fastapi_stats.config import quantile_label
 from fastapi_stats.ext.base import EndpointSpec
@@ -27,9 +27,7 @@ def _escape_help(value: str) -> str:
 
 
 def _family(name: str, kind: str, help_text: str, samples: list[str]) -> list[str]:
-    """HELP/TYPE header plus samples; nothing at all for a family without samples."""
-    if not samples:
-        return []
+    """HELP/TYPE header plus samples; a family without samples keeps its header lines."""
     return [f"# HELP {name} {_escape_help(help_text)}", f"# TYPE {name} {kind}", *samples]
 
 
@@ -41,7 +39,7 @@ def render_prometheus(collector: StatsCollector) -> str:
     """Prometheus text exposition (format 0.0.4) of the collector's per-route statistics.
 
     Quantiles come from the sliding window (last ``window_size`` calls per route) and are not aggregatable across
-    instances. The dropped-records counter is only emitted once the store has dropped something.
+    instances. Every family is always exposed; the dropped-records counter is 0 until the store drops something.
     """
     from fastapi_stats.page import split_key  # lazy: page imports parts, which imports this module
 
@@ -82,7 +80,7 @@ def render_prometheus(collector: StatsCollector) -> str:
             f"{prefix}_dropped_records_total",
             "counter",
             "Records dropped because the store could not keep up.",
-            [f"{prefix}_dropped_records_total {dropped}"] if dropped else [],
+            [f"{prefix}_dropped_records_total {dropped}"],
         ),
     ]
     return "\n".join(lines) + "\n" if lines else ""
@@ -90,9 +88,7 @@ def render_prometheus(collector: StatsCollector) -> str:
 
 def _handler(collector: StatsCollector) -> Callable[[Request], Awaitable[Response]]:
     async def metrics(request: Request) -> Response:
-        response = PlainTextResponse(render_prometheus(collector))
-        response.headers["content-type"] = CONTENT_TYPE
-        return response
+        return Response(render_prometheus(collector), media_type=CONTENT_TYPE)
 
     return metrics
 

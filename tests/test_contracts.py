@@ -1,4 +1,4 @@
-"""Stage-0 contracts: config fields and validation, shared types, registries and no-op stubs."""
+"""Stage-0 contracts: config fields and validation, shared types and registries."""
 
 import asyncio
 import dataclasses
@@ -110,7 +110,7 @@ def test_recent_windows_ignored_when_recent_minutes_is_zero():
     assert StatsConfig(recent_minutes=0, recent_windows=(500,)).recent_windows == (500,)
 
 
-def test_slow_threshold_stubs_reproduce_today():
+def test_slow_threshold_defaults():
     assert StatsConfig().slow_threshold_for("GET /x") == 500.0
     assert StatsConfig().slow_threshold_summary() == ">= 500 ms"
     off = StatsConfig(slow_threshold_ms=None)
@@ -221,7 +221,7 @@ def test_registries_in_order():
 
 
 @pytest.mark.parametrize("ext", [*EXTENSIONS, NoopExtension()], ids=lambda e: e.name)
-def test_every_stub_satisfies_extension(ext: Extension):
+def test_every_extension_satisfies_the_protocol(ext: Extension):
     config = StatsConfig()
     db = sqlite3.connect(":memory:")
     row = make_route_stats()
@@ -265,13 +265,14 @@ def test_reset_endpoint_requires_header_and_prometheus_serves_text():
         assert response.status_code == 400
         response = await prometheus.ENDPOINT.handler(collector)(request)
         assert response.status_code == 200
-        assert response.media_type == "text/plain"
-        assert response.body == b""
+        assert response.media_type == prometheus.CONTENT_TYPE
+        assert response.headers["content-type"] == prometheus.CONTENT_TYPE
+        assert bytes(response.body).startswith(b"# HELP")
 
     asyncio.run(run())
 
 
-def test_owner_stubs_are_neutral():
+def test_default_config_key_and_hook_basics():
     config = StatsConfig()
     scope = {"type": "http", "method": "GET", "path": "/raw"}
     assert keys.build_key(scope, StatsConfig(unmatched="raw"), "") == "GET /raw"
@@ -280,13 +281,11 @@ def test_owner_stubs_are_neutral():
     assert keys.build_key(scope, StatsConfig(key_func=lambda s: "x" * 500, max_key_length=5), "") == "xxxxx"
     assert mounts.mount_prefix(scope) == ""
     assert slow_context.capture(scope, config, "GET /raw", 1.0) == SlowExtra()
-    assert prometheus.render_prometheus(StatsCollector(config)) == ""
     assert lifecycle.PART.html_top(StatsCollector(config)) == ""
     assert reset.PART.html_top(StatsCollector(config)) == ""
-    assert live.PART.html_top(StatsCollector(config)) == ""
 
 
-def test_lifecycle_is_pass_through():
+def test_lifespan_without_shutdown_message_reaches_the_app():
     async def run():
         seen = []
 

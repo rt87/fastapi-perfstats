@@ -1,6 +1,6 @@
 """Live (auto-refreshing) stats page: refresh selector, table merge script and per-route sparklines (#16).
 
-The selector is only rendered when ``StatsConfig.refresh_seconds`` is not ``None`` (``0`` = available, initially off).
+The selector is always rendered; ``StatsConfig.refresh_seconds`` is its initial value (``None`` and ``0`` = Off).
 """
 
 from __future__ import annotations
@@ -79,9 +79,7 @@ _JS = """
 
 
 def _html_top(collector: StatsCollector) -> str:
-    current = collector.config.refresh_seconds
-    if current is None:
-        return ""
+    current = collector.config.refresh_seconds or 0
     options = "".join(
         f'<option value="{seconds}"{" selected" if seconds == current else ""}>{escape(label)}</option>'
         for seconds, label in _CHOICES
@@ -93,7 +91,7 @@ def _html_top(collector: StatsCollector) -> str:
 
 
 def _body_attrs(config: StatsConfig) -> dict[str, str]:
-    return {} if config.refresh_seconds is None else {"data-refresh": str(config.refresh_seconds)}
+    return {"data-refresh": str(config.refresh_seconds or 0)}
 
 
 def sparkline(series: list[int], minutes: int) -> str:

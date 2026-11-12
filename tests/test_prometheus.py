@@ -47,6 +47,7 @@ def test_families_and_values_parse():
         "fastapi_stats_requests",
         "fastapi_stats_responses_errors",
         "fastapi_stats_request_duration_seconds",
+        "fastapi_stats_dropped_records",
     }
     assert families["fastapi_stats_requests"].type == "counter"
     assert families["fastapi_stats_request_duration_seconds"].type == "summary"
@@ -110,13 +111,19 @@ def test_hostile_route_is_escaped_and_roundtrips():
     assert sample.labels["route"] == route
 
 
-def test_empty_collector_renders_nothing():
-    assert render_prometheus(StatsCollector(StatsConfig(prometheus=True))) == ""
+def test_empty_collector_keeps_headers_and_zero_dropped_counter():
+    text = render_prometheus(StatsCollector(StatsConfig(prometheus=True)))
+    assert "# TYPE fastapi_stats_requests_total counter" in text
+    assert "# TYPE fastapi_stats_request_duration_seconds summary" in text
+    assert samples(text, "fastapi_stats_requests_total") == []
+    (dropped,) = samples(text, "fastapi_stats_dropped_records_total")
+    assert dropped.value == 0
 
 
-def test_dropped_counter_only_when_nonzero():
+def test_dropped_counter_is_always_exposed():
     c = collector()
-    assert "dropped" not in render_prometheus(c)
+    (zero,) = samples(render_prometheus(c), "fastapi_stats_dropped_records_total")
+    assert zero.value == 0
     c.store = DroppingStore(c.store.routes())
     (sample,) = samples(render_prometheus(c), "fastapi_stats_dropped_records_total")
     assert sample.value == 3
@@ -146,6 +153,7 @@ def test_endpoint_serves_text_format_and_is_not_recorded():
     response = client.get("/stats/metrics")
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/plain; version=0.0.4; charset=utf-8"
+    assert response.headers["content-type"].count("charset") == 1
     assert [s.value for s in samples(response.text, "fastapi_stats_requests_total")] == [1]
     client.get("/stats/metrics")
     assert [r.key for r in c.store.routes()] == ["GET /items/{item_id}"]
