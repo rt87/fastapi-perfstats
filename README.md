@@ -52,7 +52,7 @@ from fastapi_stats import StatsCollector, StatsConfig, mount_stats
 collector = StatsCollector(StatsConfig(basic_auth=("admin", "change-me")))
 app = FastAPI()
 app.add_middleware(collector.middleware)
-mount_stats(app, collector)          # page at /stats, JSON at /stats.json
+mount_stats(app, collector)  # page at /stats, JSON at /stats.json
 ```
 
 Route level (one router, or a single function):
@@ -62,11 +62,12 @@ from fastapi import APIRouter
 
 from fastapi_stats import StatsRoute
 
-router = APIRouter(route_class=StatsRoute)              # records into the process-wide default collector
-router = APIRouter(route_class=collector.route_class)   # or: bound to your own collector (and its config)
+router = APIRouter(route_class=StatsRoute)  # records into the process-wide default collector
+router = APIRouter(route_class=collector.route_class)  # or: bound to your own collector (and its config)
+
 
 @app.get("/one")
-@collector.track("one")                                  # a single async endpoint
+@collector.track("one")  # a single async endpoint
 async def one(): ...
 ```
 

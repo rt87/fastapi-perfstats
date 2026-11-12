@@ -184,9 +184,7 @@ def render_json(collector: StatsCollector) -> dict[str, Any]:
     }
 
 
-def stats_router(
-    collector: StatsCollector, path: str | None = None, dependencies: Sequence[Any] | None = None
-) -> Any:
+def stats_router(collector: StatsCollector, path: str | None = None, dependencies: Sequence[Any] | None = None) -> Any:
     """Build a router serving the page at ``path`` and JSON at ``path + ".json"``.
 
     Without ``dependencies`` this is a plain Starlette ``Router`` (no fastapi import). With FastAPI

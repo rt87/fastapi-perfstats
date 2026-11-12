@@ -327,8 +327,14 @@ def test_store_slow_log_bounded_most_recent_kept(store):
 
 
 def test_sqlite_prunes_rows_and_persists(tmp_path):
-    cfg = StatsConfig(storage="sqlite", sqlite_path=str(tmp_path / "p.db"), window_size=5, max_slow_calls=4,
-                      max_routes=2, slow_threshold_ms=0)
+    cfg = StatsConfig(
+        storage="sqlite",
+        sqlite_path=str(tmp_path / "p.db"),
+        window_size=5,
+        max_slow_calls=4,
+        max_routes=2,
+        slow_threshold_ms=0,
+    )
     s = SqliteStore(cfg)
     for i in range(50):
         s.record(f"k{i % 4}", 1.0, 200)
@@ -399,7 +405,7 @@ def test_html_escapes_malicious_key():
     app, c = make_app()
     evil = "/<script>alert(1)</script>\"'"
     TestClient(app).get(evil)
-    c.store.record('GET <img src=x onerror=alert(1)>', 1, 200)
+    c.store.record("GET <img src=x onerror=alert(1)>", 1, 200)
     html = TestClient(app).get("/stats").text
     assert "<script>alert(1)" not in html and "<img src=x" not in html
     assert "&lt;img src=x onerror=alert(1)&gt;" in html
