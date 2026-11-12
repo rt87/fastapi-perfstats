@@ -30,10 +30,10 @@ def make():
     return c
 
 
-def test_html_has_method_and_route_columns_in_all_three_tables():
+def test_html_has_method_and_route_columns_in_all_tables():
     html = render_html(make())
     heads = re.findall(r"<thead><tr>(.*?)</tr></thead>", html)
-    assert len(heads) == 3
+    assert len(heads) == 4  # freq, rt, slow and the payload sizes table (#14)
     for h in heads:
         cols = re.findall(r"<th>(.*?)</th>", h)
         assert cols[:2] == ["Method", "Route"]

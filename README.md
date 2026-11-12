@@ -317,7 +317,15 @@ page escapes all of them.
 
 ### Payload sizes
 
-_Planned (#14)._
+With `track_sizes=True` (default) the middleware sums the request body bytes and the response body bytes of every call
+(streamed bodies across all chunks). The page gets a "Payload sizes" table (`Mean request`, `Mean response`,
+`Max response`, in `B`/`KiB`/`MiB` with the raw byte count used for sorting) and the JSON route entries gain
+`mean_request_bytes`, `mean_response_bytes` and `max_response_bytes`.
+
+- Only calls with both sizes known contribute; `StatsRoute`, `track()` and `track_sizes=False` leave them unknown, shown
+  as `n/a` (`None` in JSON).
+- Sizes are body bytes before/after any compression by an outer layer, without headers.
+- SQLite keeps the aggregates in its own table `ext_sizes` (one row per route).
 
 ### Recent activity
 

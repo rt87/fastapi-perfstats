@@ -82,6 +82,7 @@ def test_raw_cells_are_trusted_and_other_cells_escaped(monkeypatch):
 
 
 def test_sizes_table_hidden_without_columns_and_shown_with(monkeypatch):
+    monkeypatch.setattr(ext_module, "EXTENSIONS", ())
     assert 'id="sizes"' not in render_html(seeded())
     size = Column("sizes", "Mean in", 30, lambda r, c: ("12.0", 12.0))
     monkeypatch.setattr(ext_module, "EXTENSIONS", (ColumnExtension((size,)),))
