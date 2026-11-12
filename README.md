@@ -207,7 +207,13 @@ _Planned (#15)._
 
 ### Live page
 
-_Planned (#16)._
+Set `refresh_seconds` (`0`, `5`, `15` or `60`) to add an auto-refresh selector (Off / 5 s / 15 s / 60 s) to the page;
+`None` (default) renders no selector, `0` renders it initially off. The choice is remembered in the browser
+(`localStorage`). A refresh fetches the page again and swaps the table bodies, so sort order and filter text are kept;
+if the fetch fails a "refresh failed" note appears and the old data stays.
+
+With `recent_minutes > 0` the frequency table gets a `Last N min` column: an inline SVG sparkline of calls per minute
+(oldest to newest) per route, no external assets.
 
 ### Prometheus
 
