@@ -125,12 +125,26 @@ class StatsConfig:
             raise ValueError("prometheus_prefix must match [a-zA-Z_:][a-zA-Z0-9_:]*")
 
     def slow_threshold_for(self, key: str) -> float | None:
-        """Slow threshold in ms for ``key`` (``None`` = never slow). Stub: the global threshold (#12)."""
+        """Slow threshold in ms for ``key`` (``None`` = never slow).
+
+        Lookup order, plain dict lookups only: the exact key (``"GET /a/{id}"``), then the route part without the
+        method (``"/a/{id}"``, any method), then the global ``slow_threshold_ms``. An override of ``None``
+        disables the slow log for that route.
+        """
+        if key in self.slow_thresholds:
+            return self.slow_thresholds[key]
+        route = key.partition(" ")[2]
+        if route in self.slow_thresholds:
+            return self.slow_thresholds[route]
         return self.slow_threshold_ms
 
     def slow_threshold_summary(self) -> str:
-        """Heading text for the slow-call table. Stub: today's text (#12)."""
-        return "disabled" if self.slow_threshold_ms is None else f">= {self.slow_threshold_ms:g} ms"
+        """Heading text for the slow-call table, e.g. ``">= 500 ms, 2 route overrides"``."""
+        text = "disabled" if self.slow_threshold_ms is None else f">= {self.slow_threshold_ms:g} ms"
+        n = len(self.slow_thresholds)
+        if n:
+            text += f", {n} route override{'' if n == 1 else 's'}"
+        return text
 
     @property
     def credentials(self) -> BasicAuth | None:

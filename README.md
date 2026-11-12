@@ -191,7 +191,24 @@ _Planned (#11)._
 
 ### Per-route slow thresholds
 
-_Planned (#12)._
+`slow_thresholds` overrides `slow_threshold_ms` per route, for example when a report export legitimately takes
+seconds and a lookup should take milliseconds:
+
+```python
+StatsConfig(
+    slow_threshold_ms=500,
+    slow_thresholds={
+        "GET /reports/{report_id}": 3000,  # full key: this method and route only
+        "/lookup/{item_id}": 20,  # route template: any method
+        "/internal/export": None,  # None: never logged as slow
+    },
+)
+```
+
+The lookup order is the exact key, then the route template without the method, then the global threshold. Only plain
+dict lookups are used (no patterns or globs). A global `slow_threshold_ms=None` still logs routes that have their own
+value. Values must be `None` or `>= 0`, keys must not be empty. The slow-call heading shows the number of overrides
+(`Slow calls (>= 500 ms, 2 route overrides)`) and the JSON has `slow_thresholds`.
 
 ### Slow-call context
 
