@@ -6,6 +6,7 @@
 ![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
+![mypy](https://img.shields.io/badge/checked%20with-mypy%20strict-2a6db2)
 ![Status](https://img.shields.io/badge/status-prototype-orange)
 
 Tiny per-route call statistics for Starlette / FastAPI, in the spirit of `pg_stat_statements`: call counts,
@@ -122,6 +123,17 @@ All options live in the frozen dataclass `StatsConfig`.
 - Prototype: API may change; not load-tested. SQLite stats can lose the last few records on a hard crash.
 - Unmatched paths (404s) are keyed by raw path until `max_routes` is reached, then bucketed as `other`.
 - Mounted sub-applications are keyed by the inner route template as set in `scope["route"]`, if any.
+
+## Development
+
+```bash
+uv sync
+uv run pytest      # tests + coverage
+uv run ruff check .
+uv run mypy        # strict; tests/demo only relax the "must be annotated" rules
+```
+
+The package ships `py.typed`.
 
 ## Demo
 
