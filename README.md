@@ -395,7 +395,11 @@ FastAPI deltas in particular vary between runs). The `Benchmark` workflow can ru
 - Statistics are per process; there is no merging across workers. With SQLite, several processes write into the
   same file (WAL, atomic upserts, counts add up); in-memory shows only the own process.
 - Prototype: API may change; not load-tested. SQLite stats can lose the last few records on a hard crash.
-- Unmatched paths (404s) are keyed by raw path until `max_routes` is reached, then bucketed as `other`.
+- Exclusion (`exclude_paths`, and the stats paths themselves) compares the raw request path. A stats router mounted
+  below a `Mount` prefix is therefore only excluded if the prefixed path (e.g. `/api/admin/stats`) is added to
+  `exclude_paths`; otherwise the stats requests themselves are counted.
+- Unmatched paths (404s) share one `<unmatched>` key per method by default (`unmatched`); `max_routes` still caps the
+  number of distinct keys, the rest go to `other`.
 
 ## Development
 
