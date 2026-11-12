@@ -4,7 +4,6 @@ import logging
 import queue
 import secrets
 import threading
-import time
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -525,13 +524,3 @@ def test_warning_logged_without_auth_and_not_with(caplog):
     caplog.clear()
     make_app(basic_auth=("a", "b"))
     assert caplog.text == ""
-
-
-def test_overhead_is_small():
-    app, c = make_app()
-    cl = TestClient(app)
-    t = time.perf_counter()
-    for _ in range(50):
-        cl.get("/items/1")
-    assert by_key(c)["GET /items/{item_id}"].count == 50
-    assert time.perf_counter() - t < 10

@@ -323,7 +323,22 @@ use prometheus-fastapi-instrumentator or prometheus-client histograms.
 
 ### Overhead
 
-_Planned (#18)._
+`benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median microseconds
+per request over 5 repeats of 20 000 requests (after 2 000 warm-up requests):
+`uv run python benchmarks/overhead.py [--n N] [--repeats R] [--json]`. One run on Python 3.14, Windows 11, a
+laptop-class Intel CPU:
+
+| Scenario | us/request | delta vs bare |
+| --- | ---: | ---: |
+| starlette bare | 9.0 | - |
+| starlette + middleware (memory) | 15.8 | +6.8 |
+| starlette + middleware (sqlite) | 60.0 | +51.1 |
+| fastapi bare | 188.5 | - |
+| fastapi + middleware | 232.8 | +44.3 |
+| fastapi + route_class | 266.1 | +77.6 |
+
+The numbers are indicative only: they depend on the machine, the Python version and the load while measuring (the
+FastAPI deltas in particular vary between runs). The `Benchmark` workflow can run the script on demand in CI.
 
 ## Limits and caveats
 
