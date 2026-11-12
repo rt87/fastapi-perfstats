@@ -215,7 +215,7 @@ def test_finish_captures_slow_context_only_for_slow_calls(monkeypatch):
 
     monkeypatch.setattr(slow_context, "capture", capture)
     store = RecordingStore()
-    collector = StatsCollector(StatsConfig(storage=store, slow_threshold_ms=100))
+    collector = StatsCollector(StatsConfig(storage=store, slow_threshold_ms=100, unmatched="raw"))
     collector.finish(SCOPE, 10.0, 200)
     collector.finish(SCOPE, 150.0, 200, request_bytes=3, response_bytes=4)
     assert captured == [("GET /things/7", 150.0)]
@@ -244,7 +244,7 @@ def test_finish_skips_when_key_func_returns_none_and_truncates():
     skip = StatsCollector(StatsConfig(storage=store, key_func=lambda scope: None))
     skip.finish(SCOPE, 1.0, 200)
     assert store.records == []
-    short = StatsCollector(StatsConfig(storage=store, max_key_length=6))
+    short = StatsCollector(StatsConfig(storage=store, max_key_length=6, unmatched="raw"))
     short.finish(SCOPE, 1.0, 200)
     assert store.records[0].key == "GET /t"
 

@@ -113,7 +113,8 @@ def test_unknown_path_below_mount_is_not_an_item_key(collector: StatsCollector) 
     assert keys_of(collector) == {"GET /v1"}
 
 
-def test_unknown_top_level_path_is_keyed_by_raw_path(collector: StatsCollector) -> None:
+def test_unknown_top_level_path_is_keyed_by_raw_path() -> None:
+    collector = StatsCollector(StatsConfig(unmatched="raw"))
     app = starlette_app(collector, [Mount("/v1", routes=inner_routes())])
     TestClient(app).get("/zzz")
     assert keys_of(collector) == {"GET /zzz"}

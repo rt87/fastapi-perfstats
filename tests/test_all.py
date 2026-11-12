@@ -119,7 +119,7 @@ def test_excluded_paths_and_stats_page_not_counted():
 
 
 def test_unmatched_path_uses_raw_path_and_cap_goes_to_other():
-    app, c = make_app(max_routes=3)
+    app, c = make_app(max_routes=3, unmatched="raw")
     cl = TestClient(app)
     for i in range(10):
         assert cl.get(f"/nope/{i}").status_code == 404
@@ -204,7 +204,7 @@ def test_non_http_scope_passthrough():
 
 
 def test_exception_before_response_start_is_500():
-    c = StatsCollector()
+    c = StatsCollector(StatsConfig(unmatched="raw"))
 
     async def inner(scope, receive, send):
         raise ValueError

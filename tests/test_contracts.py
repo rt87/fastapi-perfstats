@@ -271,7 +271,7 @@ def test_reset_endpoint_answers_501_and_prometheus_serves_text():
 def test_owner_stubs_are_neutral():
     config = StatsConfig()
     scope = {"type": "http", "method": "GET", "path": "/raw"}
-    assert keys.build_key(scope, config, "") == "GET /raw"
+    assert keys.build_key(scope, StatsConfig(unmatched="raw"), "") == "GET /raw"
     assert keys.build_key({**scope, "route": type("R", (), {"path": "/t/{id}"})()}, config, "/api") == "GET /api/t/{id}"
     assert keys.build_key(scope, StatsConfig(key_func=lambda s: None), "") is None
     assert keys.build_key(scope, StatsConfig(key_func=lambda s: "x" * 500, max_key_length=5), "") == "xxxxx"

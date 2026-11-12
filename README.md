@@ -167,7 +167,15 @@ set `key_func`.
 
 ### Unmatched requests
 
-_Planned (#5)._
+Requests that match no route (404s from scanners, `/.env`, ...) must not use up the `max_routes` slots, so
+`StatsConfig.unmatched` decides how they are keyed:
+
+- `"group"` (default): one key per method, `GET <unmatched>`, whatever the path.
+- `"raw"`: the raw path becomes the key (unbounded until `max_routes` is reached, then `other`).
+- `"skip"`: nothing is recorded.
+
+HTTP methods outside the standard set are keyed as `OTHER` (`PROPFIND /items/1` becomes `OTHER /items/{item_id}`).
+A method mismatch on an existing route (405) keeps its route template. A custom `key_func` bypasses all of this.
 
 ### Timing semantics
 
