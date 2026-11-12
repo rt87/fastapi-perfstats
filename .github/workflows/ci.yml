@@ -31,3 +31,13 @@ jobs:
       - run: uv run mypy
         if: matrix.python-version == '3.12' || matrix.python-version == '3.14'
       - run: uv run pytest
+
+  lowest:
+    # Lowest allowed direct dependency versions (starlette>=0.37): the declared floor must be truthful.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --python 3.12 --resolution lowest-direct
+      - run: uv run pytest

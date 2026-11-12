@@ -151,7 +151,15 @@ _Planned (#2)._
 
 ### Mounted sub-applications
 
-_Planned (#4)._
+Routes under `Mount(...)` are keyed with the full mount prefix, e.g. `GET /v1/items/{item_id}` and
+`GET /v2/items/{item_id}` stay separate; nested mounts give the whole prefix. A proxy root path (`--root-path`) never
+appears in keys, and FastAPI `include_router(prefix=...)` is not prefixed twice. A mounted ASGI app without inner
+routing (`app.mount("/static", ...)`) is keyed by the mount path (`GET /static`). The suite runs in CI against the
+lowest allowed Starlette (0.37), so the declared floor is tested.
+
+Limit: a mount path with parameters (`Mount("/tenants/{tenant}", ...)`) contributes the raw value (one key per
+tenant), because the scope only carries the matched path, not the mount template. Avoid parameters in mount paths, or
+set `key_func`.
 
 ### Unmatched requests
 
