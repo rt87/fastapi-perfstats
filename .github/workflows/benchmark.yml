@@ -2,6 +2,16 @@ name: Benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      n:
+        description: Requests per repeat
+        default: "20000"
+      repeats:
+        description: Repeats per scenario (median reported)
+        default: "5"
+      python:
+        description: Python version
+        default: "3.14"
 
 permissions:
   contents: read
@@ -9,13 +19,14 @@ permissions:
 jobs:
   overhead:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --python 3.12
-      - run: uv run python benchmarks/overhead.py | tee overhead.md
-      - run: uv run python benchmarks/overhead.py --json > overhead.json
+      - run: uv sync --python ${{ inputs.python }}
+      - run: uv run python --version
+      - run: uv run python benchmarks/overhead.py --n ${{ inputs.n }} --repeats ${{ inputs.repeats }} --json-file overhead.json | tee overhead.md
+      - run: cat overhead.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: overhead

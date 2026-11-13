@@ -5,7 +5,7 @@ the middleware / route class, not the client. Two workloads: ``trivial`` (a tiny
 relative overhead) and ``realistic`` (builds and serialises a JSON payload of about 6 kB and does a fixed amount of
 CPU work, roughly what a small real endpoint costs; no sleeping, so no timer noise). Numbers are indicative only.
 
-Usage: ``uv run python benchmarks/overhead.py [--n 5000] [--repeats 5] [--json]``
+Usage: ``uv run python benchmarks/overhead.py [--n 5000] [--repeats 5] [--json] [--json-file PATH]``
 """
 
 from __future__ import annotations
@@ -224,9 +224,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--n", type=int, default=DEFAULT_N, help="requests per repeat")
     parser.add_argument("--repeats", type=int, default=DEFAULT_REPEATS, help="repeats per scenario (median reported)")
     parser.add_argument("--json", action="store_true", help="print JSON instead of a Markdown table")
+    parser.add_argument("--json-file", type=Path, help="also write the results as JSON to this file")
     args = parser.parse_args(argv)
     results = run(args.n, args.repeats)
-    print(json.dumps([asdict(r) for r in results], indent=2) if args.json else markdown(results))
+    as_json = json.dumps([asdict(r) for r in results], indent=2)
+    if args.json_file is not None:
+        args.json_file.write_text(as_json, encoding="utf-8")
+    print(as_json if args.json else markdown(results))
 
 
 if __name__ == "__main__":

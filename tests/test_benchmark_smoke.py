@@ -63,3 +63,10 @@ def test_main_prints_table_and_json(capsys):
 def test_main_rejects_bad_arguments():
     with pytest.raises(SystemExit):
         overhead.main(["--n", "abc"])
+
+
+def test_main_writes_json_file(tmp_path, capsys):
+    target = tmp_path / "out.json"
+    overhead.main(["--n", "50", "--repeats", "1", "--json-file", str(target)])
+    assert "| Scenario" in capsys.readouterr().out
+    assert len(json.loads(target.read_text(encoding="utf-8"))) == len(overhead.SCENARIOS)
