@@ -377,7 +377,7 @@ per request over 5 repeats of 5 000 requests (after 2 000 warm-up requests; a fu
 `uv run python benchmarks/overhead.py [--n N] [--repeats R] [--json]`. One run on Python 3.14 with
 `--n 20000`:
 
-| Scenario | us/request | delta vs bare |
+| Scenario | µs per request | delta vs bare (µs) |
 | --- | ---: | ---: |
 | starlette bare | 9.0 | - |
 | starlette + middleware (memory) | 15.8 | +6.8 |

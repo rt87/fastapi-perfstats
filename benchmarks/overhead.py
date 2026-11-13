@@ -167,7 +167,7 @@ def run(n: int = DEFAULT_N, repeats: int = DEFAULT_REPEATS, names: Sequence[str]
 
 
 def markdown(results: Sequence[Result]) -> str:
-    rows = ["| Scenario | us/request | delta vs bare |", "| --- | ---: | ---: |"]
+    rows = ["| Scenario | µs per request | delta vs bare (µs) |", "| --- | ---: | ---: |"]
     for r in results:
         delta = "-" if r.delta_us is None else f"+{r.delta_us:.1f}"
         rows.append(f"| {r.scenario} | {r.us_per_request:.1f} | {delta} |")
