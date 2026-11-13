@@ -5,7 +5,8 @@
 ![License](https://img.shields.io/github/license/rt87/fastapi-stats)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![mypy](https://img.shields.io/badge/checked%20with-mypy%20strict-2a6db2)
-![Status](https://img.shields.io/badge/status-prototype-orange)
+![Status](https://img.shields.io/badge/status-alpha-yellow)
+![PyPI](https://img.shields.io/badge/PyPI-not%20yet%20published-lightgrey)
 
 Tiny per-route call statistics for Starlette / FastAPI, in the spirit of `pg_stat_statements`: call counts,
 errors, latency quantiles, a bounded slow-call log and a built-in HTML stats page.
