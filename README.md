@@ -31,13 +31,10 @@ errors, latency quantiles, a bounded slow-call log and a built-in HTML stats pag
 ## Install
 
 ```bash
-pip install fastapi-stats
-# until it is released, straight from the repository:
 pip install "git+https://github.com/rt87/fastapi-stats"
 ```
 
-Python 3.12-3.15. The only dependency is `starlette`; `fastapi-stats` never depends on `fastapi` (so a future
-`fastapi[fastapi-stats]` extra stays possible). Middleware, the stats page and `mount_stats` work on plain Starlette
+Python 3.12-3.15. The only dependency is `starlette`; `fastapi-stats` never depends on `fastapi`. Middleware, the stats page and `mount_stats` work on plain Starlette
 apps; only `StatsRoute` / `collector.route_class` and `dependencies=[Depends(...)]` need FastAPI installed (clear
 `ImportError` otherwise).
 
@@ -377,8 +374,8 @@ use prometheus-fastapi-instrumentator or prometheus-client histograms.
 
 `benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median microseconds
 per request over 5 repeats of 5 000 requests (after 2 000 warm-up requests; a full run takes about 20 s):
-`uv run python benchmarks/overhead.py [--n N] [--repeats R] [--json]`. One run on Python 3.14, Windows 11, a
-laptop-class Intel CPU (measured with 20 000 requests per repeat; the default is now smaller to keep a run short):
+`uv run python benchmarks/overhead.py [--n N] [--repeats R] [--json]`. One run on Python 3.14 with
+`--n 20000`:
 
 | Scenario | us/request | delta vs bare |
 | --- | ---: | ---: |

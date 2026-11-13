@@ -35,4 +35,4 @@ See [RELEASING.md](RELEASING.md).
 
 ## Conduct
 
-Be respectful. This project follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Be respectful.
