@@ -1,0 +1,36 @@
+#!/bin/sh
+# Opt-in maintainer hook: only runs when `git config core.hooksPath .githooks` is set, so contributors are unaffected.
+# Blocks pushes containing commits whose author or committer e-mail is not a GitHub no-reply address.
+remote_name=$1
+input=$(cat)
+zero=0000000000000000000000000000000000000000
+bad=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -n "$local_sha" ] || continue
+  [ "$local_sha" = "$zero" ] && continue
+  if [ "$remote_sha" != "$zero" ] && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+    commits=$(git rev-list "$remote_sha..$local_sha")
+  else
+    commits=$(git rev-list "$local_sha" --not --remotes="$remote_name")
+  fi
+  for c in $commits; do
+    for pair in "author $(git log -1 --format=%ae "$c")" "committer $(git log -1 --format=%ce "$c")"; do
+      role=${pair%% *}
+      email=${pair#* }
+      case "$email" in
+        *@users.noreply.github.com) ;;
+        *)
+          echo "Push blocked: commit $(git rev-parse --short "$c") has a $role e-mail (domain: ${email##*@}) that is not a GitHub no-reply address." >&2
+          bad=1
+          ;;
+      esac
+    done
+  done
+done <<EOT
+$input
+EOT
+if [ "$bad" -ne 0 ]; then
+  echo "Fix: git config user.email <your-id>@users.noreply.github.com, then rewrite the offending commits." >&2
+  exit 1
+fi
+exit 0

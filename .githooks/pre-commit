@@ -1,0 +1,19 @@
+#!/bin/sh
+# Opt-in maintainer hook: only runs when `git config core.hooksPath .githooks` is set, so contributors are unaffected.
+# Blocks commits whose author or committer e-mail is not a GitHub no-reply address.
+bad=0
+for role in AUTHOR COMMITTER; do
+  ident=$(git var "GIT_${role}_IDENT") || exit 1
+  email=$(printf '%s' "$ident" | sed 's/^[^<]*<\([^>]*\)>.*$/\1/')
+  case "$email" in
+    *@users.noreply.github.com) ;;
+    *)
+      domain=${email##*@}
+      echo "Commit blocked: the $role e-mail (domain: $domain) is not a GitHub no-reply address." >&2
+      echo "Fix: git config user.email <your-id>@users.noreply.github.com" >&2
+      bad=1
+      ;;
+  esac
+done
+[ "$bad" -eq 0 ] || exit 1
+exit 0
