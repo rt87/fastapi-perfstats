@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 from fakes import make_call, make_route_stats
-from fastapi_stats import StatsCollector, StatsConfig, render_html
-from fastapi_stats.ext import stddev
-from fastapi_stats.models import RouteStats
-from fastapi_stats.stores import MemoryStore, SqliteStore, StatsStore
+from fastapi_perfstats import StatsCollector, StatsConfig, render_html
+from fastapi_perfstats.ext import stddev
+from fastapi_perfstats.models import RouteStats
+from fastapi_perfstats.stores import MemoryStore, SqliteStore, StatsStore
 
 KEY = "GET /items/{item_id}"
 

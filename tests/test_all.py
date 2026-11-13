@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from starlette.types import ASGIApp
 
 from fakes import make_call
-from fastapi_stats import (
+from fastapi_perfstats import (
     MemoryStore,
     SqliteStore,
     StatsCollector,
@@ -22,8 +22,8 @@ from fastapi_stats import (
     mount_stats,
     render_html,
 )
-from fastapi_stats.models import OTHER_KEY, nearest_rank
-from fastapi_stats.stores import build_store
+from fastapi_perfstats.models import OTHER_KEY, nearest_rank
+from fastapi_perfstats.stores import build_store
 
 
 def call_asgi(app: ASGIApp, scope: MutableMapping[str, Any]) -> None:
@@ -465,7 +465,7 @@ def hdr(user, pw):
 
 @pytest.fixture
 def auth_client(caplog):
-    caplog.set_level(logging.WARNING, logger="fastapi_stats")
+    caplog.set_level(logging.WARNING, logger="fastapi_perfstats")
     app, _ = make_app(basic_auth=("admin", "s3cret:with:colons"))
     return TestClient(app)
 
@@ -518,7 +518,7 @@ def test_basic_auth_password_not_in_repr_or_logs(caplog):
 
 
 def test_warning_logged_without_auth_and_not_with(caplog):
-    caplog.set_level(logging.WARNING, logger="fastapi_stats")
+    caplog.set_level(logging.WARNING, logger="fastapi_perfstats")
     make_app()
     assert "WITHOUT authentication" in caplog.text
     caplog.clear()

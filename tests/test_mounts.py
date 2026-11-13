@@ -10,8 +10,8 @@ from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Mount, Route
 from starlette.testclient import TestClient
 
-from fastapi_stats import StatsCollector, StatsConfig
-from fastapi_stats.mounts import mount_prefix
+from fastapi_perfstats import StatsCollector, StatsConfig
+from fastapi_perfstats.mounts import mount_prefix
 
 
 async def item(request: Request) -> JSONResponse:

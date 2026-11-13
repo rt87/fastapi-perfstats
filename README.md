@@ -1,8 +1,8 @@
-# fastapi-stats
+# fastapi-perfstats
 
-[![CI](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/rt87/fastapi-stats/actions/workflows/ci.yml)
+[![CI](https://github.com/rt87/fastapi-perfstats/actions/workflows/ci.yml/badge.svg)](https://github.com/rt87/fastapi-perfstats/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.12--3.15-blue)
-![License](https://img.shields.io/github/license/rt87/fastapi-stats)
+![License](https://img.shields.io/github/license/rt87/fastapi-perfstats)
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![mypy](https://img.shields.io/badge/checked%20with-mypy%20strict-2a6db2)
 ![Status](https://img.shields.io/badge/status-alpha-yellow)
@@ -31,10 +31,10 @@ errors, latency quantiles, a bounded slow-call log and a built-in HTML stats pag
 ## Install
 
 ```bash
-pip install "git+https://github.com/rt87/fastapi-stats"
+pip install "git+https://github.com/rt87/fastapi-perfstats"
 ```
 
-Python 3.12-3.15. The only dependency is `starlette`; `fastapi-stats` never depends on `fastapi`. Middleware, the stats page and `mount_stats` work on plain Starlette
+Python 3.12-3.15. The only dependency is `starlette`; `fastapi-perfstats` never depends on `fastapi`. Middleware, the stats page and `mount_stats` work on plain Starlette
 apps; only `StatsRoute` / `collector.route_class` and `dependencies=[Depends(...)]` need FastAPI installed (clear
 `ImportError` otherwise).
 
@@ -44,7 +44,7 @@ App level (all routes):
 
 ```python
 from fastapi import FastAPI
-from fastapi_stats import StatsCollector, StatsConfig, mount_stats
+from fastapi_perfstats import StatsCollector, StatsConfig, mount_stats
 
 collector = StatsCollector(StatsConfig(basic_auth=("admin", "change-me")))
 app = FastAPI()
@@ -57,7 +57,7 @@ Route level (one router, or a single function):
 ```python
 from fastapi import APIRouter
 
-from fastapi_stats import StatsRoute
+from fastapi_perfstats import StatsRoute
 
 router = APIRouter(route_class=StatsRoute)  # records into the process-wide default collector
 router = APIRouter(route_class=collector.route_class)  # or: bound to your own collector (and its config)
@@ -93,7 +93,7 @@ All options live in the frozen dataclass `StatsConfig`.
 | --- | --- | --- |
 | `quantiles` | `(0.5, 0.95, 0.99)` | Replaces the defaults when given; values in (0, 1] |
 | `storage` | `"memory"` | `"memory"`, `"sqlite"` or a custom `StatsStore` instance |
-| `sqlite_path` | `"fastapi_stats.db"` | SQLite file |
+| `sqlite_path` | `"fastapi_perfstats.db"` | SQLite file |
 | `window_size` | `1000` | Last N durations kept per route (quantile window) |
 | `max_routes` | `200` | Distinct keys; further keys go to the `other` bucket |
 | `slow_threshold_ms` | `500.0` | Calls at or above are logged individually; `None` disables |
@@ -117,7 +117,7 @@ All options live in the frozen dataclass `StatsConfig`.
 | `recent_windows` | `(1, 5, 15)` | Recent windows in minutes |
 | `refresh_seconds` | `None` | Initial value of the page's auto-refresh selector (`None`/0 = Off, 5, 15, 60) |
 | `prometheus` | `False` | Enable the Prometheus text endpoint |
-| `prometheus_prefix` | `"fastapi_stats"` | Prometheus metric name prefix |
+| `prometheus_prefix` | `"fastapi_perfstats"` | Prometheus metric name prefix |
 
 ## pg_stat-like behaviour
 
@@ -133,7 +133,7 @@ All options live in the frozen dataclass `StatsConfig`.
 
 ### Storage
 
-Both stores (`MemoryStore`, `SqliteStore`) take an optional `extensions` sequence (`None` = `fastapi_stats.ext.EXTENSIONS`)
+Both stores (`MemoryStore`, `SqliteStore`) take an optional `extensions` sequence (`None` = `fastapi_perfstats.ext.EXTENSIONS`)
 and call each extension's hooks with the final key (also for the `other` bucket).
 
 - **Slow calls** keep `query`, `request_id` and `context` (memory: on `SlowCall`; SQLite: table `slow_call_extra`, context
@@ -227,7 +227,7 @@ Every stats endpoint (page, JSON and the optional reset / metrics endpoints) run
 auth already failed. No "mounted WITHOUT authentication" warning is logged when `access` is set.
 
 ```python
-from fastapi_stats import StatsConfig, localhost_only
+from fastapi_perfstats import StatsConfig, localhost_only
 
 
 async def staff_only(request) -> bool:
@@ -308,7 +308,7 @@ for calls that are actually slow, so fast calls cost nothing extra.
   `session`, `code`) replaced by `[redacted]`; at most 500 characters.
 - **Context hook** (`slow_context`): a function `scope -> {name: value}` for your own correlation data. At most 10
   items, keys and values cut to 200 characters. If it raises, the request is unaffected: the error is logged once per
-  exception type on the `fastapi_stats` logger and `{"context_error": "<ExceptionTypeName>"}` is stored.
+  exception type on the `fastapi_perfstats` logger and `{"context_error": "<ExceptionTypeName>"}` is stored.
 
 Privacy: the defaults store no query and no custom context. Request and response bodies and all headers other than the
 configured id headers are never read or stored. The page and the JSON show `Request id`, `Query` and `Context`; the
@@ -353,7 +353,7 @@ With `recent_minutes > 0` the frequency table gets a `Last N min` column: an inl
 ### Prometheus
 
 Set `prometheus=True` to serve the statistics in the Prometheus text format at `{stats_path}/metrics` (protected like
-the other stats endpoints, not recorded itself). Metric names start with `prometheus_prefix` (default `fastapi_stats`):
+the other stats endpoints, not recorded itself). Metric names start with `prometheus_prefix` (default `fastapi_perfstats`):
 `_requests_total`, `_responses_errors_total{status_class}`, `_request_duration_seconds` (summary) and `_dropped_records_total`
 (always exposed, 0 until the store drops something). All families keep their HELP/TYPE lines even before the first
 request. Labels are `method` and `route`.
@@ -373,14 +373,14 @@ use prometheus-fastapi-instrumentator or prometheus-client histograms.
 ### Overhead
 
 `benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median per-request
-time over 5 repeats of 20 000 requests, with and without fastapi-stats. The `trivial` endpoint returns a tiny JSON
+time over 5 repeats of 20 000 requests, with and without fastapi-perfstats. The `trivial` endpoint returns a tiny JSON
 body and is the worst case: the added cost is fixed, so it looks large next to a request that does nothing. The
 `realistic` endpoint builds and serialises a JSON payload of about 6 kB and does a fixed amount of CPU work (about
 0.5 to 0.6 ms bare, no sleeping), which is closer to what a small real endpoint costs. The numbers are indicative
 only: they depend on the machine, the Python version and the load while measuring, and single deltas vary
 noticeably between runs. One run on Python 3.14 with `uv run python benchmarks/overhead.py --n 20000`:
 
-| Endpoint | Scenario | Bare (µs) | With fastapi-stats (µs) | Added (µs) | Added (% of request) |
+| Endpoint | Scenario | Bare (µs) | With fastapi-perfstats (µs) | Added (µs) | Added (% of request) |
 | --- | --- | ---: | ---: | ---: | ---: |
 | trivial | starlette + middleware (memory) | 18.1 | 79.8 | +61.7 | +341 % |
 | trivial | starlette + middleware (sqlite) | 18.1 | 70.2 | +52.1 | +288 % |

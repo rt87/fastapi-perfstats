@@ -11,16 +11,16 @@ from typing import TYPE_CHECKING, Any
 from starlette.types import ASGIApp
 
 # `ext` must load before `slow_context` (the extension registry imports slow_context back); names load in this order
-from fastapi_stats import ext, keys, mounts, slow_context  # noqa: F401
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.middleware import StatsMiddleware
-from fastapi_stats.models import CallRecord, SlowExtra
-from fastapi_stats.stores import StatsStore, build_store
+from fastapi_perfstats import ext, keys, mounts, slow_context  # noqa: F401
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.middleware import StatsMiddleware
+from fastapi_perfstats.models import CallRecord, SlowExtra
+from fastapi_perfstats.stores import StatsStore, build_store
 
 if TYPE_CHECKING:  # fastapi is only needed for typing here; the runtime import stays lazy
     from types import ModuleType
 
-    from fastapi_stats.route import StatsRoute
+    from fastapi_perfstats.route import StatsRoute
 
 
 def _is_excluded(path: str, excluded: tuple[str, ...]) -> bool:
@@ -135,9 +135,9 @@ class StatsCollector:
 
 
 def import_route_module() -> ModuleType:
-    """Import ``fastapi_stats.route`` (needs FastAPI) with a clear error if FastAPI is missing."""
+    """Import ``fastapi_perfstats.route`` (needs FastAPI) with a clear error if FastAPI is missing."""
     try:
-        return importlib.import_module("fastapi_stats.route")
+        return importlib.import_module("fastapi_perfstats.route")
     except ImportError as exc:
         raise ImportError("StatsRoute needs FastAPI installed (pip install fastapi)") from exc
 

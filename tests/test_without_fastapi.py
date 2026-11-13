@@ -9,15 +9,15 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from fastapi_stats import StatsCollector, StatsConfig, mount_stats, stats_router
+from fastapi_perfstats import StatsCollector, StatsConfig, mount_stats, stats_router
 
 
 @pytest.fixture
 def no_fastapi(monkeypatch):
-    """Make `import fastapi*` fail and forget already-imported fastapi_stats.route."""
+    """Make `import fastapi*` fail and forget already-imported fastapi_perfstats.route."""
     for name in [m for m in sys.modules if m == "fastapi" or m.startswith("fastapi.")]:
         monkeypatch.delitem(sys.modules, name)
-    monkeypatch.delitem(sys.modules, "fastapi_stats.route", raising=False)
+    monkeypatch.delitem(sys.modules, "fastapi_perfstats.route", raising=False)
     monkeypatch.setitem(sys.modules, "fastapi", None)  # None entry => ImportError on import
     importlib.invalidate_caches()
 
@@ -46,10 +46,10 @@ def test_middleware_page_and_json_work_on_pure_starlette(no_fastapi):
 
 
 def test_stats_route_needs_fastapi_message(no_fastapi):
-    import fastapi_stats
+    import fastapi_perfstats
 
     with pytest.raises(ImportError, match="StatsRoute needs FastAPI installed"):
-        fastapi_stats.StatsRoute  # noqa: B018
+        fastapi_perfstats.StatsRoute  # noqa: B018
     with pytest.raises(ImportError, match="StatsRoute needs FastAPI installed"):
         StatsCollector().route_class  # noqa: B018
 

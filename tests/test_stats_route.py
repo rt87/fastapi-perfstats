@@ -2,8 +2,8 @@ import pytest
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-import fastapi_stats
-from fastapi_stats import StatsCollector, StatsRoute, get_default_collector, set_default_collector
+import fastapi_perfstats
+from fastapi_perfstats import StatsCollector, StatsRoute, get_default_collector, set_default_collector
 
 
 @pytest.fixture(autouse=True)
@@ -73,5 +73,5 @@ def test_collector_route_class_is_bound_and_isolated():
 
 def test_unknown_attribute_raises():
     with pytest.raises(AttributeError):
-        fastapi_stats.Nope  # noqa: B018
-    assert fastapi_stats.make_route_class(StatsCollector()).collector is not None
+        fastapi_perfstats.Nope  # noqa: B018
+    assert fastapi_perfstats.make_route_class(StatsCollector()).collector is not None

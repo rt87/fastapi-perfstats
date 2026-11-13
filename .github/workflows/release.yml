@@ -35,7 +35,7 @@ jobs:
 
           (wheel,) = glob.glob("dist/*.whl")
           names = zipfile.ZipFile(wheel).namelist()
-          assert "fastapi_stats/py.typed" in names, "py.typed missing from the wheel"
+          assert "fastapi_perfstats/py.typed" in names, "py.typed missing from the wheel"
           assert not any(n.startswith("tests/") for n in names), "tests/ must not be in the wheel"
 
           if os.environ["REF_TYPE"] == "tag":

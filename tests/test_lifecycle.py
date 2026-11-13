@@ -12,11 +12,11 @@ from starlette.testclient import TestClient
 from starlette.types import Message, Receive, Scope, Send
 
 from fakes import FIXED_TS, RecordingStore, make_call
-from fastapi_stats import lifecycle
-from fastapi_stats.collector import StatsCollector
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.page import render_html, render_json
-from fastapi_stats.stores import SqliteStore
+from fastapi_perfstats import lifecycle
+from fastapi_perfstats.collector import StatsCollector
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.page import render_html, render_json
+from fastapi_perfstats.stores import SqliteStore
 
 
 def _app(collector: StatsCollector) -> FastAPI:

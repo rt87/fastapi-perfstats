@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from fastapi_stats.sqlite_schema import SCHEMA_VERSION, ensure_schema
+from fastapi_perfstats.sqlite_schema import SCHEMA_VERSION, ensure_schema
 
 CORE_TABLES = {"routes", "durations", "slow_calls"}
 

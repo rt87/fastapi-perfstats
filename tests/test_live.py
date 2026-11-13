@@ -3,8 +3,8 @@ import re
 import pytest
 
 from fakes import RecordingStore, make_call, make_route_stats
-from fastapi_stats import StatsCollector, StatsConfig, live, render_html
-from fastapi_stats.page import script_text
+from fastapi_perfstats import StatsCollector, StatsConfig, live, render_html
+from fastapi_perfstats.page import script_text
 
 
 def point_list(svg):

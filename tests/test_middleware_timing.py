@@ -11,8 +11,8 @@ from fastapi.testclient import TestClient
 from starlette.types import Message
 
 from fakes import RecordingStore
-from fastapi_stats import StatsCollector, StatsConfig
-from fastapi_stats.models import CLIENT_CLOSED_STATUS
+from fastapi_perfstats import StatsCollector, StatsConfig
+from fastapi_perfstats.models import CLIENT_CLOSED_STATUS
 
 
 def make_app(**kw: Any) -> tuple[FastAPI, StatsCollector, RecordingStore]:

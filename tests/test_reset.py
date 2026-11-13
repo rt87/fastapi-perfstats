@@ -9,10 +9,10 @@ from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
 from fakes import RecordingStore, make_call
-from fastapi_stats import reset
-from fastapi_stats.collector import StatsCollector
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.page import mount_stats, render_html, script_text
+from fastapi_perfstats import reset
+from fastapi_perfstats.collector import StatsCollector
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.page import mount_stats, render_html, script_text
 
 GUARD = {"X-Stats-Reset": "1"}
 

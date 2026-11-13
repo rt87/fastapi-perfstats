@@ -11,7 +11,7 @@ import secrets
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
-from fastapi_stats.config import StatsConfig
+from fastapi_perfstats.config import StatsConfig
 
 
 def _basic_auth_denied(request: Request, config: StatsConfig) -> Response | None:

@@ -13,7 +13,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from fakes import RecordingStore, make_call
-from fastapi_stats import (
+from fastapi_perfstats import (
     SlowExtra,
     StatsCollector,
     StatsConfig,
@@ -25,13 +25,13 @@ from fastapi_stats import (
     slow_context,
     stats_router,
 )
-from fastapi_stats import ext as ext_module
-from fastapi_stats import headers as headers_module
-from fastapi_stats import page as page_module
-from fastapi_stats import parts as parts_module
-from fastapi_stats.ext.base import Column, EndpointSpec, NoopExtension, PagePart
-from fastapi_stats.middleware import StatsMiddleware
-from fastapi_stats.stores import MemoryStore
+from fastapi_perfstats import ext as ext_module
+from fastapi_perfstats import headers as headers_module
+from fastapi_perfstats import page as page_module
+from fastapi_perfstats import parts as parts_module
+from fastapi_perfstats.ext.base import Column, EndpointSpec, NoopExtension, PagePart
+from fastapi_perfstats.middleware import StatsMiddleware
+from fastapi_perfstats.stores import MemoryStore
 
 
 def seeded(**config: object) -> StatsCollector:
@@ -180,7 +180,7 @@ def test_headers_hooks_are_applied(monkeypatch):
 
 
 def test_authentication_warning_only_when_nothing_protects_the_page(caplog):
-    caplog.set_level(logging.WARNING, logger="fastapi_stats")
+    caplog.set_level(logging.WARNING, logger="fastapi_perfstats")
     stats_router(StatsCollector(StatsConfig(access=lambda request: True)))
     assert caplog.text == ""
     stats_router(StatsCollector(StatsConfig()), dependencies=[Depends(lambda: None)])

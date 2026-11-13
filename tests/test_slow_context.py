@@ -13,10 +13,10 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from fakes import make_call, make_slow_call
-from fastapi_stats import StatsCollector, StatsConfig, render_html, render_json
-from fastapi_stats import slow_context as sc
-from fastapi_stats.models import SlowExtra
-from fastapi_stats.stores import MemoryStore, SqliteStore, StatsStore
+from fastapi_perfstats import StatsCollector, StatsConfig, render_html, render_json
+from fastapi_perfstats import slow_context as sc
+from fastapi_perfstats.models import SlowExtra
+from fastapi_perfstats.stores import MemoryStore, SqliteStore, StatsStore
 
 TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736"
 TRACEPARENT = f"00-{TRACE_ID}-00f067aa0ba902b7-01"
@@ -134,7 +134,7 @@ def test_raising_hook_records_context_error_and_logs_once_per_type(caplog: pytes
     def boom(s: Mapping[str, Any]) -> Mapping[str, str]:
         raise KeyError("x")
 
-    caplog.set_level(logging.WARNING, logger="fastapi_stats")
+    caplog.set_level(logging.WARNING, logger="fastapi_perfstats")
     config = StatsConfig(slow_context=boom)
     assert cap(config, scope()).context == {"context_error": "KeyError"}
     assert cap(config, scope()).context == {"context_error": "KeyError"}

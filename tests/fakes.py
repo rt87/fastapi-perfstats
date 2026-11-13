@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi_stats.models import CallRecord, RouteStats, SlowCall
-from fastapi_stats.stores import StatsStore
+from fastapi_perfstats.models import CallRecord, RouteStats, SlowCall
+from fastapi_perfstats.stores import StatsStore
 
 FIXED_TS = 1_700_000_000.0
 

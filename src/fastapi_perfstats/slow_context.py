@@ -12,11 +12,11 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import parse_qsl, urlencode
 
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.ext.base import Column, NoopExtension
-from fastapi_stats.models import SlowCall, SlowExtra
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.ext.base import Column, NoopExtension
+from fastapi_perfstats.models import SlowCall, SlowExtra
 
-log = logging.getLogger("fastapi_stats")
+log = logging.getLogger("fastapi_perfstats")
 
 REDACTED = "[redacted]"
 MAX_QUERY_LENGTH = 500

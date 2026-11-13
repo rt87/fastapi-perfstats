@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from fastapi_stats import lifecycle
-from fastapi_stats.models import CLIENT_CLOSED_STATUS
+from fastapi_perfstats import lifecycle
+from fastapi_perfstats.models import CLIENT_CLOSED_STATUS
 
 if TYPE_CHECKING:
-    from fastapi_stats.collector import StatsCollector
+    from fastapi_perfstats.collector import StatsCollector
 
 
 class StatsMiddleware:

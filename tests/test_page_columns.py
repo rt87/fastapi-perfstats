@@ -3,8 +3,8 @@ import re
 import pytest
 
 from fakes import make_call
-from fastapi_stats import StatsCollector, StatsConfig, render_html, render_json
-from fastapi_stats.page import split_key
+from fastapi_perfstats import StatsCollector, StatsConfig, render_html, render_json
+from fastapi_perfstats.page import split_key
 
 
 @pytest.mark.parametrize(

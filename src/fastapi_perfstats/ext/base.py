@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 from starlette.requests import Request
 from starlette.responses import Response
 
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.models import CallRecord, RouteStats
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.models import CallRecord, RouteStats
 
 if TYPE_CHECKING:
-    from fastapi_stats.collector import StatsCollector
+    from fastapi_perfstats.collector import StatsCollector
 
 
 @dataclass(frozen=True)

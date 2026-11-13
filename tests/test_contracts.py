@@ -9,9 +9,9 @@ from types import MappingProxyType
 import pytest
 from starlette.requests import Request
 
-import fastapi_stats
+import fastapi_perfstats
 from fakes import RecordingStore, make_call, make_route_stats, make_slow_call
-from fastapi_stats import (
+from fastapi_perfstats import (
     StatsCollector,
     StatsConfig,
     auth,
@@ -25,9 +25,9 @@ from fastapi_stats import (
     reset,
     slow_context,
 )
-from fastapi_stats.ext import EXTENSIONS, recent, sizes, stddev
-from fastapi_stats.ext.base import Column, EndpointSpec, Extension, NoopExtension, PagePart
-from fastapi_stats.models import (
+from fastapi_perfstats.ext import EXTENSIONS, recent, sizes, stddev
+from fastapi_perfstats.ext.base import Column, EndpointSpec, Extension, NoopExtension, PagePart
+from fastapi_perfstats.models import (
     CLIENT_CLOSED_STATUS,
     KNOWN_METHODS,
     OTHER_METHOD,
@@ -36,8 +36,8 @@ from fastapi_stats.models import (
     RecentStats,
     SlowExtra,
 )
-from fastapi_stats.sqlite_schema import SCHEMA_VERSION, ensure_schema
-from fastapi_stats.stores import MemoryStore, StatsStore
+from fastapi_perfstats.sqlite_schema import SCHEMA_VERSION, ensure_schema
+from fastapi_perfstats.stores import MemoryStore, StatsStore
 
 # -- config ------------------------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ def test_config_new_field_defaults():
     assert c.recent_windows == (1, 5, 15)
     assert c.refresh_seconds is None
     assert c.prometheus is False
-    assert c.prometheus_prefix == "fastapi_stats"
+    assert c.prometheus_prefix == "fastapi_perfstats"
 
 
 @pytest.mark.parametrize(
@@ -351,12 +351,12 @@ def test_exports():
         "render_prometheus",
         "__version__",
     ):
-        assert hasattr(fastapi_stats, name), name
-        assert name in fastapi_stats.__all__
-    assert isinstance(fastapi_stats.__version__, str) and fastapi_stats.__version__
-    assert fastapi_stats.StatsMiddleware.__module__ == "fastapi_stats.middleware"
+        assert hasattr(fastapi_perfstats, name), name
+        assert name in fastapi_perfstats.__all__
+    assert isinstance(fastapi_perfstats.__version__, str) and fastapi_perfstats.__version__
+    assert fastapi_perfstats.StatsMiddleware.__module__ == "fastapi_perfstats.middleware"
 
 
 def test_unknown_attribute_still_raises():
     with pytest.raises(AttributeError):
-        fastapi_stats.does_not_exist  # noqa: B018
+        fastapi_perfstats.does_not_exist  # noqa: B018

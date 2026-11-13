@@ -12,9 +12,9 @@ from collections import deque
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, NamedTuple
 
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.ext.base import Column, NoopExtension
-from fastapi_stats.models import CallRecord, RecentStats, RouteStats
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.ext.base import Column, NoopExtension
+from fastapi_perfstats.models import CallRecord, RecentStats, RouteStats
 
 MAX_MINUTES = 1440  # upper bound of ``StatsConfig.recent_minutes``; memory buckets never exceed it
 

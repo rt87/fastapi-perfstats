@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/rt87/fastapi-stats/security/policy
+    url: https://github.com/rt87/fastapi-perfstats/security/policy
     about: Please do not open a public issue; follow the security policy.

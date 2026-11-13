@@ -6,9 +6,9 @@ import sqlite3
 from collections.abc import Mapping
 from typing import Any
 
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.ext.base import Column, NoopExtension
-from fastapi_stats.models import CallRecord, RouteStats
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.ext.base import Column, NoopExtension
+from fastapi_perfstats.models import CallRecord, RouteStats
 
 _SCHEMA = (
     "CREATE TABLE IF NOT EXISTS ext_sizes (key TEXT PRIMARY KEY, sized_count INTEGER NOT NULL, "

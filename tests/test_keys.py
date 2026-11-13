@@ -4,9 +4,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fastapi_stats import StatsCollector, StatsConfig, mount_stats, render_html
-from fastapi_stats.keys import build_key
-from fastapi_stats.models import OTHER_KEY, OTHER_METHOD, UNMATCHED_ROUTE
+from fastapi_perfstats import StatsCollector, StatsConfig, mount_stats, render_html
+from fastapi_perfstats.keys import build_key
+from fastapi_perfstats.models import OTHER_KEY, OTHER_METHOD, UNMATCHED_ROUTE
 
 
 def make_app(**kw):

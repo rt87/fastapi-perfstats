@@ -6,7 +6,7 @@ first release and enables it.
 ## What CI does today
 
 `.github/workflows/release.yml` runs on every `v*` tag and on manual dispatch. The `build` job builds the sdist and
-wheel with `uv build`, runs `twine check`, asserts that the wheel contains `fastapi_stats/py.typed` and no `tests/`,
+wheel with `uv build`, runs `twine check`, asserts that the wheel contains `fastapi_perfstats/py.typed` and no `tests/`,
 and, on tag runs, that the tag (without the leading `v`) equals the version in `pyproject.toml`. The result is kept as
 a workflow artifact only.
 

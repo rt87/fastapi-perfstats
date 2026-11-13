@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.models import KNOWN_METHODS, OTHER_METHOD, UNMATCHED_ROUTE
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.models import KNOWN_METHODS, OTHER_METHOD, UNMATCHED_ROUTE
 
 
 def build_key(scope: Mapping[str, Any], config: StatsConfig, prefix: str) -> str | None:

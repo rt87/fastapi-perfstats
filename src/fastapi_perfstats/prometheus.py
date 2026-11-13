@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 from starlette.requests import Request
 from starlette.responses import Response
 
-from fastapi_stats.config import quantile_label
-from fastapi_stats.ext.base import EndpointSpec
+from fastapi_perfstats.config import quantile_label
+from fastapi_perfstats.ext.base import EndpointSpec
 
 if TYPE_CHECKING:
-    from fastapi_stats.collector import StatsCollector
+    from fastapi_perfstats.collector import StatsCollector
 
 
 CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
@@ -41,7 +41,7 @@ def render_prometheus(collector: StatsCollector) -> str:
     Quantiles come from the sliding window (last ``window_size`` calls per route) and are not aggregatable across
     instances. Every family is always exposed; the dropped-records counter is 0 until the store drops something.
     """
-    from fastapi_stats.page import split_key  # lazy: page imports parts, which imports this module
+    from fastapi_perfstats.page import split_key  # lazy: page imports parts, which imports this module
 
     config = collector.config
     prefix = config.prometheus_prefix

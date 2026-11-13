@@ -21,9 +21,9 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount, Route
 from starlette.testclient import TestClient
 
-from fastapi_stats import StatsCollector, StatsConfig, mount_stats, render_json
-from fastapi_stats.ext import EXTENSIONS
-from fastapi_stats.ext.base import NoopExtension
+from fastapi_perfstats import StatsCollector, StatsConfig, mount_stats, render_json
+from fastapi_perfstats.ext import EXTENSIONS
+from fastapi_perfstats.ext.base import NoopExtension
 
 AUTH = {"Authorization": "Basic " + base64.b64encode(b"admin:s3cret").decode()}
 GUARD = {"X-Stats-Reset": "1"}
@@ -229,15 +229,16 @@ def test_prometheus_after_load_with_auth_and_dropped_counter(collector_of: Any) 
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/plain; version=0.0.4; charset=utf-8"
     samples = prom(response.text)
-    by_route = {s.labels["route"]: s.value for s in samples["fastapi_stats_requests_total"]}
+    by_route = {s.labels["route"]: s.value for s in samples["fastapi_perfstats_requests_total"]}
     assert by_route["/items/{item_id}"] == 3 and by_route["/boom"] == 1
     errors = {
-        (s.labels["route"], s.labels["status_class"]): s.value for s in samples["fastapi_stats_responses_errors_total"]
+        (s.labels["route"], s.labels["status_class"]): s.value
+        for s in samples["fastapi_perfstats_responses_errors_total"]
     }
     assert errors[("/boom", "5xx")] == 1 and errors[("/items/{item_id}", "5xx")] == 0
-    (dropped,) = samples["fastapi_stats_dropped_records_total"]
+    (dropped,) = samples["fastapi_perfstats_dropped_records_total"]
     assert dropped.value == 0
-    assert "fastapi_stats_request_duration_seconds_count" in samples
+    assert "fastapi_perfstats_request_duration_seconds_count" in samples
 
 
 def test_prometheus_denied_by_access_hook(collector_of: Any) -> None:

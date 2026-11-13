@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from fakes import make_call
-from fastapi_stats import StatsCollector, StatsConfig, render_html, render_json
-from fastapi_stats.stores import MemoryStore, SqliteStore, StatsStore
+from fastapi_perfstats import StatsCollector, StatsConfig, render_html, render_json
+from fastapi_perfstats.stores import MemoryStore, SqliteStore, StatsStore
 
 REPORT = "GET /reports/{report_id}"
 LOOKUP = "GET /lookup/{item_id}"

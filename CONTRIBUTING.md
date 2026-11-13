@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in fastapi-stats.
+Thanks for your interest in fastapi-perfstats.
 
 ## Setup
 

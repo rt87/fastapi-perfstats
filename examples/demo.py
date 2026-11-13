@@ -6,7 +6,7 @@ import random
 import uvicorn
 from fastapi import FastAPI, HTTPException
 
-from fastapi_stats import StatsCollector, StatsConfig, mount_stats
+from fastapi_perfstats import StatsCollector, StatsConfig, mount_stats
 
 config = StatsConfig(
     slow_threshold_ms=100,

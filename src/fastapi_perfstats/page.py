@@ -14,13 +14,13 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route, Router
 
-from fastapi_stats import auth, ext, headers, parts
-from fastapi_stats.collector import StatsCollector
-from fastapi_stats.config import StatsConfig, quantile_label
-from fastapi_stats.ext.base import Column, EndpointSpec
-from fastapi_stats.models import RouteStats, SlowCall
+from fastapi_perfstats import auth, ext, headers, parts
+from fastapi_perfstats.collector import StatsCollector
+from fastapi_perfstats.config import StatsConfig, quantile_label
+from fastapi_perfstats.ext.base import Column, EndpointSpec
+from fastapi_perfstats.models import RouteStats, SlowCall
 
-log = logging.getLogger("fastapi_stats")
+log = logging.getLogger("fastapi_perfstats")
 
 _CSS = """
 :root{--bg:#fff;--fg:#1b1f24;--mut:#667;--line:#d0d7de;--head:#f3f5f7;--bad:#b3261e}
@@ -237,7 +237,7 @@ def stats_router(collector: StatsCollector, path: str | None = None, dependencie
     config = collector.config
     p = (path or config.stats_path).rstrip("/") or "/"
     if config.credentials is None and config.access is None and not dependencies:
-        log.warning("fastapi-stats: stats page at %s is mounted WITHOUT authentication", p)
+        log.warning("fastapi-perfstats: stats page at %s is mounted WITHOUT authentication", p)
 
     async def denied(request: Request) -> Response | None:
         response = await auth.authorize(request, config)

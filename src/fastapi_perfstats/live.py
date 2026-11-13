@@ -8,11 +8,11 @@ from __future__ import annotations
 from html import escape
 from typing import TYPE_CHECKING
 
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.ext.base import Column, NoopExtension, PagePart
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.ext.base import Column, NoopExtension, PagePart
 
 if TYPE_CHECKING:
-    from fastapi_stats.collector import StatsCollector
+    from fastapi_perfstats.collector import StatsCollector
 
 _CHOICES = ((0, "Off"), (5, "5 s"), (15, "15 s"), (60, "60 s"))
 _WIDTH = 120
@@ -23,7 +23,7 @@ _JS = """
 (function(){
   var sel=document.getElementById('refresh'),note=document.getElementById('refresh-note');
   if(!sel)return;
-  var KEY='fastapi-stats-refresh',timer=null,busy=false,state={};
+  var KEY='fastapi-perfstats-refresh',timer=null,busy=false,state={};
   function valid(v){return v==='0'||v==='5'||v==='15'||v==='60';}
   try{var saved=localStorage.getItem(KEY);if(saved!==null&&valid(saved))sel.value=saved;}catch(e){}
   document.querySelectorAll('table.s').forEach(function(t){

@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 import anyio.to_thread
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from fastapi_stats.ext.base import PagePart
+from fastapi_perfstats.ext.base import PagePart
 
 if TYPE_CHECKING:
-    from fastapi_stats.collector import StatsCollector
+    from fastapi_perfstats.collector import StatsCollector
 
 _SHUTDOWN_DONE = ("lifespan.shutdown.complete", "lifespan.shutdown.failed")
 

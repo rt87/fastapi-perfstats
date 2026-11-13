@@ -17,10 +17,10 @@ from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
-from fastapi_stats.ext.base import EndpointSpec, PagePart
+from fastapi_perfstats.ext.base import EndpointSpec, PagePart
 
 if TYPE_CHECKING:
-    from fastapi_stats.collector import StatsCollector
+    from fastapi_perfstats.collector import StatsCollector
 
 SUFFIX = "/reset"
 HEADER = "x-stats-reset"

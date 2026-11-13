@@ -14,10 +14,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
 
-from fastapi_stats import sqlite_schema
-from fastapi_stats.config import StatsConfig, quantile_label
-from fastapi_stats.ext.base import Extension
-from fastapi_stats.models import OTHER_KEY, CallRecord, RouteStats, SlowCall, nearest_rank
+from fastapi_perfstats import sqlite_schema
+from fastapi_perfstats.config import StatsConfig, quantile_label
+from fastapi_perfstats.ext.base import Extension
+from fastapi_perfstats.models import OTHER_KEY, CallRecord, RouteStats, SlowCall, nearest_rank
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 def _resolve_extensions(extensions: Sequence[Extension] | None) -> tuple[Extension, ...]:
     """``None`` means the registered extensions (imported lazily: the registry imports modules that use stores)."""
     if extensions is None:
-        from fastapi_stats.ext import EXTENSIONS
+        from fastapi_perfstats.ext import EXTENSIONS
 
         return EXTENSIONS
     return tuple(extensions)
@@ -224,7 +224,7 @@ class SqliteStore(StatsStore):
                 self._db.execute(statement)
         self._db.commit()
         self._known = {r[0] for r in self._db.execute("SELECT key FROM routes")}
-        self._thread = threading.Thread(target=self._run, name="fastapi-stats-writer", daemon=True)
+        self._thread = threading.Thread(target=self._run, name="fastapi-perfstats-writer", daemon=True)
         self._thread.start()
 
     @property
@@ -302,7 +302,7 @@ class SqliteStore(StatsStore):
         except Exception as exc:
             self._db.rollback()
             self._known = known
-            log.exception("fastapi-stats: store batch rolled back")
+            log.exception("fastapi-perfstats: store batch rolled back")
             return exc
         return None
 

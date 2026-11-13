@@ -10,7 +10,7 @@ from fastapi.routing import APIRoute
 from starlette.requests import Request
 from starlette.responses import Response
 
-from fastapi_stats.collector import StatsCollector, get_default_collector
+from fastapi_perfstats.collector import StatsCollector, get_default_collector
 
 
 class StatsRoute(APIRoute):

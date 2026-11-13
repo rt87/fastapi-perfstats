@@ -7,8 +7,8 @@ import re
 from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
-from fastapi_stats import StatsCollector, StatsConfig, mount_stats
-from fastapi_stats.headers import csp_hash, data_headers, page_headers
+from fastapi_perfstats import StatsCollector, StatsConfig, mount_stats
+from fastapi_perfstats.headers import csp_hash, data_headers, page_headers
 
 AUTH = ("admin", "change-me")
 

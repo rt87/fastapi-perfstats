@@ -7,7 +7,7 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from fastapi_stats import StatsCollector, StatsConfig, localhost_only, mount_stats
+from fastapi_perfstats import StatsCollector, StatsConfig, localhost_only, mount_stats
 
 AUTH = ("admin", "change-me")
 

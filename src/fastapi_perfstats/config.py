@@ -1,4 +1,4 @@
-"""Single configuration object for fastapi-stats."""
+"""Single configuration object for fastapi-perfstats."""
 
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ class StatsConfig:
 
     quantiles: tuple[float, ...] = DEFAULT_QUANTILES
     storage: Any = "memory"
-    sqlite_path: str = "fastapi_stats.db"
+    sqlite_path: str = "fastapi_perfstats.db"
     window_size: int = 1000
     max_routes: int = 200
     slow_threshold_ms: float | None = 500.0
@@ -90,7 +90,7 @@ class StatsConfig:
     recent_windows: tuple[int, ...] = (1, 5, 15)
     refresh_seconds: int | None = None
     prometheus: bool = False
-    prometheus_prefix: str = "fastapi_stats"
+    prometheus_prefix: str = "fastapi_perfstats"
 
     def __post_init__(self) -> None:
         if isinstance(self.basic_auth, tuple):

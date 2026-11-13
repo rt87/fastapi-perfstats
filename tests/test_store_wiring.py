@@ -13,11 +13,11 @@ from typing import Any
 import pytest
 
 from fakes import FIXED_TS, make_call
-from fastapi_stats.config import StatsConfig
-from fastapi_stats.ext import EXTENSIONS
-from fastapi_stats.ext.base import NoopExtension
-from fastapi_stats.models import OTHER_KEY, CallRecord, RouteStats
-from fastapi_stats.stores import MemoryStore, SqliteStore, StatsStore
+from fastapi_perfstats.config import StatsConfig
+from fastapi_perfstats.ext import EXTENSIONS
+from fastapi_perfstats.ext.base import NoopExtension
+from fastapi_perfstats.models import OTHER_KEY, CallRecord, RouteStats
+from fastapi_perfstats.stores import MemoryStore, SqliteStore, StatsStore
 
 
 class RecordingExt(NoopExtension):

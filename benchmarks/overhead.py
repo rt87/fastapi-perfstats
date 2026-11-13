@@ -1,4 +1,4 @@
-"""Overhead benchmark: microseconds per request with and without fastapi-stats (not part of the package).
+"""Overhead benchmark: microseconds per request with and without fastapi-perfstats (not part of the package).
 
 Drives ASGI apps directly with an in-process fake ``receive``/``send`` (no HTTP client, no network), so it measures
 the middleware / route class, not the client. Two workloads: ``trivial`` (a tiny response, the worst case for the
@@ -26,7 +26,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from fastapi_stats import StatsCollector, StatsConfig
+from fastapi_perfstats import StatsCollector, StatsConfig
 
 DEFAULT_N = 5_000
 DEFAULT_REPEATS = 5
