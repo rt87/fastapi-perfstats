@@ -372,22 +372,28 @@ use prometheus-fastapi-instrumentator or prometheus-client histograms.
 
 ### Overhead
 
-`benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median microseconds
-per request over 5 repeats of 5 000 requests (after 2 000 warm-up requests; a full run takes about 20 s):
-`uv run python benchmarks/overhead.py [--n N] [--repeats R] [--json]`. One run on Python 3.14 with
-`--n 20000`:
+`benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median per-request
+time over 5 repeats of 20 000 requests, with and without fastapi-stats. The `trivial` endpoint returns a tiny JSON
+body and is the worst case: the added cost is fixed, so it looks large next to a request that does nothing. The
+`realistic` endpoint builds and serialises a JSON payload of about 6 kB and does a fixed amount of CPU work (about
+0.5 to 0.6 ms bare, no sleeping), which is closer to what a small real endpoint costs. The numbers are indicative
+only: they depend on the machine, the Python version and the load while measuring, and single deltas vary
+noticeably between runs. One run on Python 3.14 with `uv run python benchmarks/overhead.py --n 20000`:
 
-| Scenario | µs per request | delta vs bare (µs) |
-| --- | ---: | ---: |
-| starlette bare | 9.0 | - |
-| starlette + middleware (memory) | 15.8 | +6.8 |
-| starlette + middleware (sqlite) | 60.0 | +51.1 |
-| fastapi bare | 188.5 | - |
-| fastapi + middleware | 232.8 | +44.3 |
-| fastapi + route_class | 266.1 | +77.6 |
+| Endpoint | Scenario | Bare (µs) | With fastapi-stats (µs) | Added (µs) | Added (% of request) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| trivial | starlette + middleware (memory) | 18.1 | 79.8 | +61.7 | +341 % |
+| trivial | starlette + middleware (sqlite) | 18.1 | 70.2 | +52.1 | +288 % |
+| trivial | fastapi + middleware | 214.8 | 284.9 | +70.1 | +33 % |
+| trivial | fastapi + route_class | 214.8 | 299.2 | +84.4 | +39 % |
+| realistic | starlette + middleware (memory) | 544.2 | 602.7 | +58.5 | +11 % |
+| realistic | starlette + middleware (sqlite) | 544.2 | 586.1 | +41.9 | +8 % |
+| realistic | fastapi + middleware | 639.2 | 703.7 | +64.6 | +10 % |
+| realistic | fastapi + route_class | 639.2 | 737.8 | +98.7 | +15 % |
 
-The numbers are indicative only: they depend on the machine, the Python version and the load while measuring (the
-FastAPI deltas in particular vary between runs). The `Benchmark` workflow can run the script on demand in CI.
+The added cost is roughly 40 to 100 µs per request in both cases; for an endpoint that takes about half a
+millisecond that is 8 to 15 %, and it shrinks further for endpoints that talk to a database or another service. The
+`Benchmark` workflow can run the script on demand in CI.
 
 ## Limits and caveats
 
