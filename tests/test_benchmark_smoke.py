@@ -47,8 +47,8 @@ def test_markdown_table():
     lines = table.splitlines()
     assert lines[0].startswith("| Scenario")
     assert len(lines) == 4
-    assert "| trivial: starlette bare |" in lines[2] and lines[2].endswith("| - | - |")
-    assert "+" in lines[3] and lines[3].endswith(" % |")
+    assert "| trivial: starlette bare |" in lines[2] and lines[2].endswith("| - |")
+    assert "+" in lines[3] and "%" not in lines[3]
 
 
 def test_main_prints_table_and_json(capsys):

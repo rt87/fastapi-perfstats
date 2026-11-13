@@ -211,11 +211,10 @@ def run(n: int = DEFAULT_N, repeats: int = DEFAULT_REPEATS, names: Sequence[str]
 
 
 def markdown(results: Sequence[Result]) -> str:
-    rows = ["| Scenario | µs per request | added (µs) | added (% of bare request) |", "| --- | ---: | ---: | ---: |"]
+    rows = ["| Scenario | µs per request | added (µs) |", "| --- | ---: | ---: |"]
     for r in results:
         added = "-" if r.delta_us is None else f"{r.delta_us:+.1f}"
-        pct = "-" if r.pct_of_request is None else f"{r.pct_of_request:+.1f} %"
-        rows.append(f"| {r.scenario} | {r.us_per_request:.1f} | {added} | {pct} |")
+        rows.append(f"| {r.scenario} | {r.us_per_request:.1f} | {added} |")
     return "\n".join(rows)
 
 

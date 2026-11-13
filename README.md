@@ -373,27 +373,28 @@ use prometheus-fastapi-instrumentator or prometheus-client histograms.
 ### Overhead
 
 `benchmarks/overhead.py` drives ASGI apps in-process (no HTTP client, no network) and reports the median per-request
-time over 5 repeats of 20 000 requests, with and without fastapi-perfstats. The `trivial` endpoint returns a tiny JSON
-body and is the worst case: the added cost is fixed, so it looks large next to a request that does nothing. The
-`realistic` endpoint builds and serialises a JSON payload of about 6 kB and does a fixed amount of CPU work (about
-0.5 to 0.6 ms bare, no sleeping), which is closer to what a small real endpoint costs. The numbers are indicative
-only: they depend on the machine, the Python version and the load while measuring, and single deltas vary
-noticeably between runs. One run on Python 3.14 with `uv run python benchmarks/overhead.py --n 20000`:
+time, with and without fastapi-perfstats. The table shows the added cost per request, measured by the `Benchmark`
+workflow on a GitHub-hosted Linux runner with Python 3.14.4 (`uv run python benchmarks/overhead.py --n 20000
+--repeats 7`); the numbers are indicative only and vary between runs. The `trivial` endpoint returns a tiny JSON
+body, the `realistic` one builds and serialises a JSON payload of about 6 kB and does a fixed amount of CPU work.
 
-| Endpoint | Scenario | Bare (µs) | With fastapi-perfstats (µs) | Added (µs) | Added (% of request) |
-| --- | --- | ---: | ---: | ---: | ---: |
-| trivial | starlette + middleware (memory) | 18.1 | 79.8 | +61.7 | +341 % |
-| trivial | starlette + middleware (sqlite) | 18.1 | 70.2 | +52.1 | +288 % |
-| trivial | fastapi + middleware | 214.8 | 284.9 | +70.1 | +33 % |
-| trivial | fastapi + route_class | 214.8 | 299.2 | +84.4 | +39 % |
-| realistic | starlette + middleware (memory) | 544.2 | 602.7 | +58.5 | +11 % |
-| realistic | starlette + middleware (sqlite) | 544.2 | 586.1 | +41.9 | +8 % |
-| realistic | fastapi + middleware | 639.2 | 703.7 | +64.6 | +10 % |
-| realistic | fastapi + route_class | 639.2 | 737.8 | +98.7 | +15 % |
+| Scenario | Added, trivial endpoint (µs) | Added, realistic endpoint (µs) |
+| --- | ---: | ---: |
+| Starlette + middleware (memory) | +16.6 | +24.8 |
+| Starlette + middleware (sqlite) | +12.9 | +21.3 |
+| FastAPI + middleware | +21.0 | +25.6 |
+| FastAPI + `route_class` | +29.7 | +32.1 |
 
-The added cost is roughly 40 to 100 µs per request in both cases; for an endpoint that takes about half a
-millisecond that is 8 to 15 %, and it shrinks further for endpoints that talk to a database or another service. The
-`Benchmark` workflow can run the script on demand in CI.
+The added cost is roughly constant per request (about 13 to 32 µs here), so the relative overhead is
+`added µs / endpoint duration`:
+
+| Endpoint duration | Overhead |
+| ---: | ---: |
+| 1 ms | ≈ 1.3-3.2 % |
+| 10 ms | ≈ 0.13-0.32 % |
+| 100 ms | ≈ 0.013-0.032 % |
+
+fastapi-perfstats exists to find slow endpoints, and for those the overhead is negligible.
 
 ## Limits and caveats
 
