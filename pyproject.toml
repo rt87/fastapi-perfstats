@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-perfstats"
-version = "0.1.0"
+version = "0.1.1"
 description = "Tiny per-route call statistics, slow-call log and stats page for Starlette/FastAPI apps"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -19,6 +19,8 @@ classifiers = [
     "Typing :: Typed",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
+    "Topic :: System :: Monitoring",
+    "Topic :: Internet :: WWW/HTTP",
 ]
 dependencies = ["starlette>=0.37"]
 
