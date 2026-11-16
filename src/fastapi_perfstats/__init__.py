@@ -1,4 +1,4 @@
-"""fastapi-perfstats: per-route call statistics, slow-call log and a stats page (prototype)."""
+"""fastapi-perfstats: per-route call statistics, slow-call log and a stats page."""
 
 import importlib.metadata
 from typing import Any

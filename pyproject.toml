@@ -1,7 +1,7 @@
 [project]
 name = "fastapi-perfstats"
 version = "0.1.0"
-description = "Tiny per-route call statistics, slow-call log and stats page for Starlette/FastAPI apps (prototype)"
+description = "Tiny per-route call statistics, slow-call log and stats page for Starlette/FastAPI apps"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "rt87", email = "rt87@users.noreply.github.com" }]
@@ -24,6 +24,7 @@ dependencies = ["starlette>=0.37"]
 
 [project.urls]
 Homepage = "https://github.com/rt87/fastapi-perfstats"
+Repository = "https://github.com/rt87/fastapi-perfstats"
 Issues = "https://github.com/rt87/fastapi-perfstats/issues"
 Changelog = "https://github.com/rt87/fastapi-perfstats/blob/main/CHANGELOG.md"
 

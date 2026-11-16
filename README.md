@@ -6,7 +6,7 @@
 ![Ruff](https://img.shields.io/badge/lint-ruff-261230)
 ![mypy](https://img.shields.io/badge/checked%20with-mypy%20strict-2a6db2)
 ![Status](https://img.shields.io/badge/status-alpha-yellow)
-![PyPI](https://img.shields.io/badge/PyPI-not%20yet%20published-lightgrey)
+[![PyPI](https://img.shields.io/pypi/v/fastapi-perfstats)](https://pypi.org/project/fastapi-perfstats/)
 ![AI-assisted](https://img.shields.io/badge/AI--assisted-Claude%20Code-8A2BE2)
 
 Tiny per-route call statistics for Starlette / FastAPI, in the spirit of `pg_stat_statements`: call counts,
@@ -31,12 +31,16 @@ errors, latency quantiles, a bounded slow-call log and a built-in HTML stats pag
 ## Install
 
 ```bash
-pip install "git+https://github.com/rt87/fastapi-perfstats"
+pip install fastapi-perfstats
+# or
+uv add fastapi-perfstats
 ```
 
-Python 3.12-3.15. The only dependency is `starlette`; `fastapi-perfstats` never depends on `fastapi`. Middleware, the stats page and `mount_stats` work on plain Starlette
-apps; only `StatsRoute` / `collector.route_class` and `dependencies=[Depends(...)]` need FastAPI installed (clear
-`ImportError` otherwise).
+The latest development version: `pip install "git+https://github.com/rt87/fastapi-perfstats"`.
+
+Python 3.12-3.15. The only dependency is `starlette`; `fastapi-perfstats` never depends on `fastapi`. Middleware,
+the stats page and `mount_stats` work on plain Starlette apps; only `StatsRoute` / `collector.route_class` and
+`dependencies=[Depends(...)]` need FastAPI installed (clear `ImportError` otherwise).
 
 ## Quick start
 
@@ -400,7 +404,7 @@ fastapi-perfstats exists to find slow endpoints, and for those the overhead is n
 
 - Statistics are per process; there is no merging across workers. With SQLite, several processes write into the
   same file (WAL, atomic upserts, counts add up); in-memory shows only the own process.
-- Prototype: API may change; not load-tested. SQLite stats can lose the last few records on a hard crash.
+- Alpha: the API may change; not load-tested. SQLite stats can lose the last few records on a hard crash.
 - Exclusion (`exclude_paths`, and the stats paths themselves) compares the raw request path. A stats router mounted
   below a `Mount` prefix is therefore only excluded if the prefixed path (e.g. `/api/admin/stats`) is added to
   `exclude_paths`; otherwise the stats requests themselves are counted.
