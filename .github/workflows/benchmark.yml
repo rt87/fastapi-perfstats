@@ -23,7 +23,7 @@ jobs:
     env:
       UV_PYTHON: ${{ inputs.python }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
       - run: uv sync
       - run: uv run python --version
