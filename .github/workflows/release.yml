@@ -1,7 +1,7 @@
 name: Release
 
-# Builds and verifies the package. Nothing is uploaded anywhere until the owner explicitly enables publishing
-# (see RELEASING.md).
+# Builds and verifies the package; on a v* tag it publishes to PyPI after the owner approves the `pypi`
+# environment (see RELEASING.md).
 
 on:
   push:
@@ -53,8 +53,7 @@ jobs:
 
   publish-pypi:
     needs: build
-    # enable only after the owner's explicit go for the first release
-    if: false
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
